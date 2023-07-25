@@ -1,0 +1,529 @@
+---
+title: "Script_Week6: Comparing means"
+author: "Ana-Maria Plesca"
+date: "2023-04-24"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+#suppress the warnings and other messages from showing in the knitted file.
+knitr::opts_chunk$set(
+  fig.width  = 8, 
+  fig.height = 5, 
+  echo       = TRUE, 
+  warning    = FALSE, 
+  message    = FALSE,
+  cache      = TRUE
+)
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+```
+
+```{r}
+library(haven)
+library(tidyverse)
+library(ggplot2)
+library(Rmisc)
+```
+
+# Learning objectives
+
+1.  Approaching an old problem with a new solution: plotting means for within-participants data with adjusted error bars.
+2.  Distinguishing between dependent and independent t-tests.
+3.  Learn how to conduct dependent and independent t-tests with R.
+4.  Learn which assumptions need to be checked before running t-tests with R.
+5.  Practicing "tidy" language with `tidyverse` to transform and reshape data.
+
+# Introduction
+
+Welcome to the 6th week of R! So far we've focused our efforts on exploring and understanding the relationship between two variables (via correlation). This week, we will compare groups of data, and to be more exact, we will compare their means. First off, we will review how between-participants vs. within-participants data should be plotted and you will learn how to do this manually. Next, we will separately conduct dependent and independent t-tests, but not before we will go through all assumptions that need to be fulfilled.
+
+# Plotting error bar graphs for within-participants data
+
+We will be working with data stemming from 24 arachnophobes. 12 of them were asked to look at a spider. Their subsequent anxiety was measured. The remaining 12 were shown only pictures of the same spider and again their anxiety was measured. The data in itself stems from a between-participants design, meaning that different participants were exposed to different conditions.
+
+Let's pretend that this data comes from a within-participants design instead. Let's say that all 24 participants saw spiders in both conditions, but at different times (e.g., picture first, spider second or the other way around.)
+
+You have encountered this task before, but this time around we will learn how to adjust the data manually instead of creating summary statistics adjusted for within-participants designs using the `summarySEwithin()` function. Going forward, if you will be asked to create adjusted data or plots, please use the manual method.
+
+We will go through these data transformation steps using R commands from the `tidyverse` package we have used before. This method makes code readable and easy to understand.
+We will use the pipe operator `%>%` (`Ctrl`+`Shift`+`M` - Windows, `Cmd` + `Shift` + `M` - Mac) and the `mutate()` function to create new columns using computations based on already existing columns. 
+
+### Step 1: Loading the data to R
+
+```{r}
+spiderWide <- read.delim("SpiderWide.dat")
+
+# Look at the structure of your data
+str(spiderWide)
+
+#  a dataframe with 2 columns with 12 values each - 12 correspond to the picture condition, 12 to the real condition
+```
+
+### Step 2: Compute the average anxiety level for each participant
+
+We will create a column called `pMean`, which will include the average anxiety levels for each participant across conditions.
+
+```{r}
+spiderWide <- spiderWide %>% 
+  mutate(pMean = (spiderWide$picture + spiderWide$real)/2)
+
+#Check the result
+spiderWide
+```
+
+### Step 3: Compute grand mean of anxiety.
+
+Next, we will compute the grand mean of anxiety. The grand mean represents the mean of all scores from all participants, no matter the condition they come from. We'll store the result in the `grandMean` variable.
+
+```{r}
+grandMean<-mean(c(spiderWide$picture, spiderWide$real))
+
+grandMean
+```
+
+### Step 4: Compute the adjustment factor
+
+Looking at the column labeled `pMean` (average anxiety of a participant), you should notice that the values are different across participants. This indicates that some people were overall more scared of spiders than others. The fact that the mean anxiety scores for each participant differ, suggests that there are individual differences between participants. These differences in natural anxiety represent random variation and "contaminate" the error bar graphs. If we do not adjust the values, we will get the same plot as we would get based on between-participants data (independent design).
+
+What we want to do in order to accurately illustrate the within-participants data is to **adjust the scores in each condition such that when we take the mean score across conditions, it is the same for all participants.**
+
+To do that, we compute **an adjustment factor** by **subtracting each participant's average score (pMean) from the grand mean (grandMean)**. We will store the result in an additional column called `adj`.
+
+```{r}
+spiderWide <- spiderWide %>% 
+  mutate(adj = grandMean-spiderWide$pMean)
+
+# Check the result
+spiderWide
+```
+
+The scores in the newly created `adj` column represent the difference between each participant's mean anxiety and the mean anxiety levels across all participants (the grand mean). Negative adjustment values indicate that those participants were more anxious than others, while positive values indicate that those participants were less anxious than others. If that sounds confusing, check the value of the `grandMean`. (adapted from Field, 2013, p. 263ff.)
+
+### Step 5: Create adjusted values for each variable
+
+We will use the adjustment scores to adjust existing `picture` and `real` anxiety scores for each participant. To adjust the anxiety scores for each of the two conditions, we need to add the adjustment factor separately to the `picture` and to the `real` scores.
+
+```{r}
+spiderWide <- spiderWide %>% 
+  mutate(pictureAdjusted = picture + adj,
+         realAdjusted = real + adj
+  )
+# Check the result
+spiderWide
+```
+
+Why did we do all of this? We needed to remove the variation between participants, because we did not have 24 different participants in our data (or at least we are pretending that this is the case.) Since each participant was tested using repeated measures, in order to accurately show the effect of our manipulation (showing a real vs. depicted spider) it is necessary to remove the individual differences (natural anxiety which varies from one person to the other).
+
+### Step 6: Picking the correct data format for plotting and analysis
+
+Before we start plotting the spider data we have adjusted for a repeated-measures design, we need to think about the "shape of the data" that we need. You will need to think about the shape of the data you are working with every time you wish to draw plots or conduct statistical analyses.
+
+#### Long vs. wide data
+
+Take a look at the Figure below, depicting two tables. On the right side you are seeing data organised in long format, whereas data in wide format is depicted on the right side.
+
+```{r long_vs_wide, fig.align = 'center', out.width = "80%", fig.cap = "Figure 1: Long data depicted on the left side, wide data depicted on the right side", echo=F}
+knitr::include_graphics("./images/long_vs_short.png")
+```
+
+---------
+
+**Long data**:
+
+- Includes separate columns for each variable.
+
+- Take a glance at the figure above: there are different columns for condition, year and value.
+
+- Often needed for plotting with `ggplot()`. Example: plotting Value as a function of Year.
+
+---------
+
+**Wide data**:
+
+- Data relating to the same variable occurs in different columns. In other words, values are spread across multiple columns.
+
+- Take a look at the table above: There are multiple columns for `Year` and the values are spread across these columns.
+
+- Can also be used with `ggplot()`, but mostly when wanting to plot correlations, or to explore relationship between numerical variables.  
+
+---------
+
+### Step 7: Reshaping data
+
+Considering that we want to create an error bar graph showing the relationship between the experimental condition (real spider vs. depicted spider) and the measured anxiety, which data format do you think we need?
+
+**Long-shaped data!**
+
+We will reshape our data using the function `pivot_longer()`. 
+
+
+#### Step 7.1.: Re-arranging and reshaping the dataset
+
+We wish to plot a bar graph with error bars, but we want to keep in the values before and after the adjustment. Let's remove the `pMean` and `adj` columns from the data we will work with for plotting purposes. We will be selecting these out using the function `select()`. We will use the `!` as a negation operator. 
+
+```{r}
+# the following select function call means: take the spiderWide data frame and select everything EXCEPT for the pMean and adj columns. 
+spiderNew <- spiderWide %>% 
+  select(!c("pMean", "adj"))
+
+# Check the result
+spiderNew
+```
+
+#### Step 7.2.: Creating a conditions column and an Anxiety column
+
+We need to indicate the number (index) of the columns that we wish to bring in long format.
+Next, we specify the new column or columns to create from the information stored in the column names of the present data.
+Next, we specify the name of the column where the values of anxiety will be stored
+
+```{r}
+spiderLonger <- spiderNew %>% 
+  pivot_longer(cols = 1:4, names_to = "Condition", values_to = "Anxiety")
+
+# Check the result
+spiderLonger
+```
+
+#### Step 7.3.: Creating a summary statistics to create error graphs
+
+```{r}
+spider_long_summary <- summarySE(spiderLonger, measurevar = "Anxiety", groupvars = "Condition")
+spider_long_summary
+```
+
+Take some time to notice the result of the adjustments. Look especially in the `sd`, `se`, and `ci` columns. The adjusted values are much lower than they were before.
+
+Note: we do not need to use the summarySEwithin() function because
+
+### Step 8: Plot the error bar graph
+
+- **Task 1 - Use your plotting skills**: Use your plotting skills to visualize the average effect of spider exposure type on anxiety scores. Plot the conditions on the x-axis and the anxiety on the y-axis. 
+
+```{r}
+ggplot(spider_long_summary, aes(x = Condition, y = Anxiety, fill = Condition))+
+  geom_bar(position = "dodge", stat = "summary", fun = "mean")+ 
+    geom_errorbar(aes(ymin=Anxiety-ci, ymax=Anxiety+ci), 
+                  width=.2,                              
+                  position=position_dodge(.9))+
+  labs(x = "Condition", y = "Average anxiety score", fill = "Group", 
+       title = "Average anxiety score as a function of exposure to depicted vs. real spiders")+ 
+  scale_fill_brewer(palette = "Purples")
+
+```
+
+- **Task 2**: Describe this graph as well as the changes brought by the adjustment of the anxiety scores.
+
+Assuming that the data we are looking at comes from a within-participants design:
+
+On average, when participants were exposed to real spiders, they expressed higher levels of anxiety compared to conditions when they have seen a depicted spider. By having reduced individual variation (e.g., with respect to natural levels of anxiety), the 95% confidence error bars shrank visibly. The comparably shorter error bars suggest that we can be more confident that the true population mean associated with each condition lays within the marked confidence interval. 
+
+
+# The t-test and how to choose the appropriate test
+
+The exercise you have just finished completing was meant to remind you of the differences between within-participants (dependent) data, and between-participants (independent) data. This is an essential aspect to keep in mind not only when you visualize your data, but also when you want to conduct statistical analyses. 
+
+For instance, you might want to compare whether two groups, or find out whether two conditions are significantly different from each other. For that you could use the **t-test**, which comes in two flavours:
+
+- **Independent t-test**:
+
+- Use it when you want to compare two different experimental conditions
+- Different participants were assigned to each experimental condition (e.g., Participant 1 sees the real condition only, participant 2 sees the picture condition only)
+
+- **Dependent t-test**:
+
+- Use it when you want to compare two different experimental conditions
+- The same participants took part in both conditions at different point in time (e.g., Participant 1 saw the picture condition first and the real condition second, participant 2 the other way around)
+
+## Conducting an independent t-test with R
+
+### Loading the data
+
+We will still be working with the spider data and we will consider these key facts about our data:
+
+- There are 24 different participants
+- 12 participants were exposed to real spiders (real condition) and their anxiety was measured right after the exposure.
+- 12 participants were exposed to depicted spiders (picture condition) and their anxiety was measured right after the exposure.
+- There are thus two independent samples for our conditions. We want to find out whether participants' anxiety scores differ significantly when they see real vs. depicted spiders. 
+
+```{r}
+spiderLong <- read.delim("SpiderLong.dat")
+```
+
+**Explore the data**
+
+```{r}
+str(spiderLong)
+```
+
+```{r}
+head(spiderLong)
+```
+
+### Check if the assumptions of the independent t-test are met by the data
+
+#### 1. The sampling distribution should be normally distributed.
+
+- **Task 3**: Check if the sampling distribution is normally distributed and report the result of the test you have chosen to conduct. You need to conduct separate tests for each condition group. 
+
+To do that you need to look at each group of conditions and their corresponding anxiety scores. You can subset your data into two groups using the `filter()` function. Alternatively, use the pivot_wider function to split the `Group` column into two colums representing anxiety values for each conditions Use the help section or Google to make it easier to figure out which arguments to supply to the function of your choosing.
+
+Option 1: Building subsets
+```{r}
+#Option 1: building subsets
+picture_subset <- spiderLong %>% 
+  filter(Group == "Picture")
+
+real_subset<- spiderLong %>% 
+  filter(Group == "Real")
+```
+
+Option 2: reshape the data
+```{r}
+# Option 2: reshape the data
+spiderWider <- spiderLong %>% 
+  pivot_wider(names_from = Group, values_from = Anxiety) %>% 
+  unnest()
+```
+
+- 3.1. **Generate descriptive statistics**
+
+```{r}
+# Generating summary statistics for the anxiety scores triggered after exposing participants to depictions of spiders
+psych::describe(spiderWider$Picture)
+```
+```{r}
+# Generating summary statistics for the anxiety scores triggered after exposing participants to real spiders
+
+psych::describe(spiderWider$Real)
+```
+
+- 3.2. **Generate histograms and qq - plots**
+
+**Histogram of the anxiety scores observed for the picture conditions**
+
+```{r}
+hist(spiderWider$Picture)
+```
+
+- The histogram does not show a distribution that is very similar to the normality distribution, yet there are no apparent outliers in our data. 
+
+
+**Histogram of the anxiety scores observed for the real conditions**
+
+```{r}
+hist(spiderWider$Real)
+```
+
+- While the data does not seem to be so close to the normal distribution, it does not seem to deviate drastically from it either
+
+**QQ-plot of the anxiety scores in the picture condition**
+
+```{r}
+# Select both lines of code and run them together, or press on the run button
+qqnorm(spiderWider$Picture)
+qqline(spiderWider$Picture)
+```
+ 
+- While the histogram did not offer a clear picture with respect to the distribution, the QQ-plot does. The data points are close to the line, which indicates that the sampling distribution is fairly normally distributed
+ 
+ 
+**QQ-plot of the anxiety scores in the real condition**
+
+```{r}
+# Select both lines of code and run them together, or press on the run button
+qqnorm(spiderWider$Real)
+qqline(spiderWider$Real)
+```
+
+- While the histogram did not offer a clear picture with respect to the distribution, the QQ-plot does. The data points are close to the line, which indicates that the sampling distribution is fairly normally distributed.
+
+
+- 3.3. **Conduct the normality test**
+
+We are dealing with small samples, and that is why the Shapiro-Wilk test is the correct choice here
+
+```{r}
+# Conducting a normality test for the picture subset
+shapiro.test(spiderWider$Picture)
+```
+
+```{r}
+# Conducting a normality test for the real subset
+shapiro.test(spiderWider$Real)
+```
+None of the groups differ significantly from normality (*W*_picture = .96, *p* > .05; *W*_real =.98, *p* > .05 )
+
+
+#### 2. The outcome variable: continuous and at least interval.
+
+- **Task 4**: Decide whether the data fulfills this assumption and motivate why.
+
+The data fulfills this assumption because we are working with assumptions score, which could also be categorized as ratio data with a true 0 point.
+
+#### 3. The scores measured in different conditions are independent.
+
+That is because it is assumed that different participants saw different conditions.
+
+- **Task 5**: Decide whether the data fulfills this assumption and motivate why.
+
+
+Assuming that different participants were assigned separately to one of the two conditions, the data does fulfill this assumption.
+
+
+#### 4. Homogeneity of variance.
+
+It is assumed that the variances within each of the two independent groups we are comparing are similar.
+
+- **Task 6**: Test whether the variance is equal within the picture and the real group. Report the results of the test. What test did you use for that (we have encountered this before in Week 2)
+
+Hint 1: The name of the test for homogeneity of variance starts with L. 
+Hint 2: It helps googling this, if you cannot recall. 
+
+```{r}
+car::leveneTest(Anxiety ~ Group, data = spiderLong)
+```
+Levene's test yielded a non-significant result (*F* = .02, *p* > .05), indicating that the variance across groups is similar.
+
+
+### Conducting the independent t-test
+
+By now, I hope that you have also reached the conclusion that the data fulfills all the assumptions. We can go ahead and conduct the t-test. For that, we will use the `t.test()` function, whereby we need to specify whether the data is paired or not. For independent samples t-tests, the `paired` argument will always be set to `FALSE`.
+
+Before we proceed, there are two more things to think about:
+
+**1. How should the data look like?**
+
+As a rule of thumb, independent t-tests are usually conducted on long data. However, R is not picky when it comes to data shapes and t-tests. You could also use wide data. The sole difference is that for long data, you would use a formula (Dependent Variable (Anxiety) ~ Independent Variable(Group)), whereas for wide data, you would introduce the columns containing the groups you wish to compare (Independent Variable 1 (Picture), Independent Variable 2 (Real)). We will see how this works both ways.
+
+**2. What's the alertnative hypothesis?**
+
+It should be clear before running the test whether your alternative hypothesis is directional (one-tailed), or non-directional (two-tailed). Remember that you cannot just switched between the two after you have conducted the test. This needs to be clear before running it.
+
+-----------
+
+Key facts: We are working with long data at the moment, and our alternative hypothesis could be that the difference in anxiety scores between the picture and the real group is not 0 (two-tailed hypothesis).
+
+
+```{r}
+t.test(Anxiety ~ Group, data = spiderLong, alternative = "two.sided", paired = FALSE)
+```
+--------
+The very same t-test could have been conducted with two dependent variables as a first two arguments, instead of the formula.
+
+If you have built subsets, it could have looked as follows:
+
+- `t.test(picture_subset$Anxiety, real_subset$Anxiety, alternative = "two.sided", paired = FALSE)`
+
+If you have reshaped your data into wider format, it could have looked as follows:
+
+- `t.test(spiderWider$Picture, spiderWider$Real, alternative = "two.sided", paired = FALSE)`
+
+The results would have been the same no matter the option you choose.
+---------
+
+What does the output tell us?
+
+- the *t*-statistic is `-1.6813` for approx. 21 degrees of freedom. Rememeber that the t-statistic is computed by dividing the mean difference between the groups (40-47) by the standard error of the mean difference.
+
+- the *p*-value of 0.1072 indicates that the test is not statistically significant, which indicates that there is no significant difference between the groups. The p-value reflects the probability that a test statistic such as the one we observed would occur if the null hypothesis were true (that there is no difference between our two groups - the probability is 10,7%)
+
+- the alternative hypothesis reiterates the two-tailed hypothesis we have specified
+
+- we get 95% confidence intervals: the first value represents the lower bound, the second value the upper bound. The 95% confidence intervals inform us that with 95% certainty, the true mean could lie between -15.648641 and 1.648641.
+Because this interval includes 0, it is likely that there is no difference between our two conditions. 
+
+- we get the mean average score for each of the two groups. 
+
+
+Reporting the results of the t-test:
+
+We compared the anixety scores of participants exposed to real vs. depicted spiders. While the result of a two-tailed independent t-test yielded a non-significant result *t*(22) = -1.68, *p* > .05., on average, participants who saw real spiders reported higher anxiety scores (M = 47, SE = 3,18) versus those who were exposed to depicted spiders (M = 40, SE = 2,68).
+
+! Note: SE values come from descriptive statistics. Extract these from the step where you check the sampling distribution for normality and compute descriptive statistics.
+
+
+## Conducting a dependent t-test
+
+You will be entirely in charge of conducting a dependent t-test in R. We will use the same function to conduct the t-test, namely `t.test()`. The only difference is that the `paired` argument will be set to `TRUE`.
+
+*Key facts about the data:*
+
+- We will still use the spider data, but this time around our total sample size is 12
+- A total of 12 participants saw both real and picture conditions within the same experiments, but at different points in time (picture first, real second, or the other way around.)
+
+```{r}
+spiderWide <- read.csv("SpiderWide.csv")
+```
+
+Check the data
+
+```{r}
+str(spiderWide)
+```
+
+
+### Check if the assumptions of the dependent t-test are met by the data
+
+#### 1. The sampling distribution of the difference between the groups of scores should be normally distributed
+
+- **Task 7**: Add a column called `difference` to the `spiderWide` dataframe. This column should contain the difference between the picture and real scores for each participant. Use the pipe operator for this operation.
+
+```{r}
+spiderWide <- spiderWide %>% 
+  mutate(difference = picture - real)
+```
+
+- **Task 8**: Check if the diffence between the groups are normally distributed.
+
+  - Generate descriptive statistics
+  
+```{r}
+psych::describe(spiderWide$difference)
+```
+  - Draw histograms and qq-plots
+  
+**Histogram depicting the distribution of the differences between the anxiety score groups**
+  
+```{r}
+hist(spiderWide$difference)
+```
+
+**QQ-plot depicting the distribution of the differences between the anxiety score groups**
+
+```{r}
+qqnorm(spiderWide$difference)
+qqline(spiderWide$difference)
+```
+
+The QQ-plot paints a clear picture: it seems that the sampling distribution of the difference is pretty normally distributed
+
+  - Conduct the appropriate test considering the size of the sample
+  
+Since our sample size is small, now N = 12, a Shapiro-Wilk test is still the correct choice
+
+```{r}
+shapiro.test(spiderWide$difference)
+```
+The sampling distribution of the differences between the groups of anxiety scores does not differ significantly from normality (*W* = .95, *p* > .05).
+
+#### 2. The outcome variable: continuous and at least interval.
+
+- **Task 9**: Decide whether the data fulfills this assumption and motivate why.
+
+The outcome variable is indeed continuous and thus fulfills the assumptions. Moreover, the independent variables are of categorical nature.
+
+### Conduct the dependent t-test
+
+- **Task 10**: State your hypotheses and decide which type of data format you will be using
+
+Alternate Hypothesis: There is a difference between the two spider treatment groups. (two-tailed, non-directional)
+Data shape: wide, though keep in mind that this could have worked just as well with a long format. In that case, a formula should have been specified. Otherwise the paired argument still needs to be set to TRUE.
+
+- **Task 11**: Conduct the dependent t-test and report the result
+
+```{r}
+t.test(Anxiety ~ Group, data = spiderLong, alternative = "two.sided", paired = TRUE)
+```
+Participants' anxiety levels were measured after being exposed to real and depicted spiders. We have found a statistically significant difference (*t*(11) = -2.47, *p* < .05) between the two conditions, with real spiders triggering more anxiety (M = 47, SE = 3,18) than depicted spiders (M = 40, SE = 2,68)

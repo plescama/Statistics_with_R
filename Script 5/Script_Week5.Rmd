@@ -1,0 +1,281 @@
+---
+title: "Script 5: Correlations Part 2"
+author: "Ana-Maria Plesca"
+date: "2023-04-11"
+output:
+  html_document:
+    toc: true
+---
+
+# Introduction
+
+Welcome to the fifth week of statistics with R. This week we will continue learning about correlations, but you will be the one doing most of the work. I am still strongly recommending you to take a look at Chapter 6 in Andy Field's book Discovering Statistics with R - you will find it on Moodle, in the folder for the fourth week. 
+
+# Learning objectives
+
+1. Gain more confidence in using different correlation tests.
+2. Enrich your scatterplot-"drawing" skills.
+3. Achieve a very good understanding of bivariate correlations.
+
+# Script prep
+
+Loading packages
+
+```{r message=FALSE, warning=FALSE}
+library(Hmisc)
+library(ggplot2)
+library(polycor)
+library(tidyverse)
+library(nortest)
+library(Rmisc)
+options(scipen = 999) # this code of line gets rid of scientific notation in the 
+                      # output of statistical tests. What's scientific notation? Check  this out                            https://www.datakwery.com/post/2020-07-11-scientific-notation-in-r/
+                      # In short though 1.2e+10 is the scientific notation for 12,000,000,000.
+```
+
+Setting up the working directory
+
+```{r}
+setwd("~/Desktop/Stats planning/Script 5") # please adjust this path according to YOUR OWN path
+```
+
+# Bivariate correlation
+
+We'll have a look at another example of bivariate correlation, using **exam anxiety data coming from 103 students** (Train your reflex to keep in mind the size of the sample you are working with - this helps you figure out which statistical tests are better suited for your data).
+
+```{r}
+examAnxiety <- haven::read_sav("Exam Anxiety.sav")
+examAnxiety
+```
+
+The variables we will be working with are:
+
+- Time spent revising for the exam (expressed in hours) - see column **Revise**
+- Exam performance (expressed in percentages) - see column **Exam**
+- Exam anxiety (expressed in scores out of 100) - see column **Anxiety**
+- Gender -see column **Gender**
+
+Note: The **Code** column represents the participant number.
+
+As you know already, before we even begin conducting our analysis, we need to specifically state our hypotheses about the data.
+
+1) As anxiety increases, exam performance will decrease.
+2) The more time was spent revising, the more the exam performance will increase.
+
+What does this tell you about the hypotheses? Think about this to prepare for the correlation tests.
+
+## Scatterplots and regression lines
+
+By now you already know how to draw scatterplots both with `ggplot()` and without (simply using the `plot()` function call and supplying two numerical variables as arguments of the plot() function). We will now add to your scatterplott-related knowledge a new element: **a regression line**.
+
+When we add such a regression line to a `ggplot()` scatterplot, we in fact add a *smoothing* element to it using the `geom_smooth()` function. What this does is adds a line that summarizes the relationship between the variables, it smooths out all data points into a line. We won't yet go into the details of regression, but for now, think of a regression line, as a summary of the relationship between two variables.
+
+Let's put this in practice.
+
+### Example: Plotting a scatterplot of anxiety by exam performance 
+
+To create scatterplots you essentially need to add the `geom_point()` layer to the `ggplot()` geometric structure. 
+We will add the regression line that summarizes the relationship between anxiety and exam performance with the `geom_smooth()` layer, and the argument: `method = lm`. We are instructing the `geom_smooth` layer to add a line, and the chosen method is that of a linear model (abbreviated as `lm`)
+
+```{r message=FALSE, warning=FALSE}
+ggplot(examAnxiety, aes(Exam, Anxiety))+
+geom_point(size = 3) +
+geom_smooth(method = "lm") +
+labs(x = "Exam Performance (%)", y = "Exam Anxiety",
+     title = "Relationship between exam anxiety and exam performance") 
+```
+
+The regression line is surrounded by the 95% confidence interval (the grey area). If you want to keep the regression line only, please supply one more argument to the geom_smooth() layer: `se = F` (which
+is short for 'standard error = False'). 
+
+Furthermore, you can adjust the color of the regression line, to make it stand out more.
+
+```{r message=FALSE, warning=FALSE}
+ggplot(examAnxiety, aes(Exam, Anxiety))+
+geom_point(size = 3) +
+geom_smooth(method = "lm", color = "red", se = F) + # changed the color of the regression line + switched off CIs based on standard error
+labs(x = "Exam Performance (%)", y = "Exam Anxiety",
+     title = "Relationship between exam anxiety and exam performance") 
+```
+
+What does this plot tell you? How would you summarize the relationship between exam anxiety and exam performance?
+
+### Task 1: Plot a scatterplot of revision time by exam performance
+
+It's your turn to "draw" a scatterplot describing the relationship between revision time and exam performance. I advise you to not copy & paste the code above. Try to recreate it yourself, as this will help you understand the process.
+
+To complete this task, please add:
+
+- a green-coloured regression line
+- a regression line without CI
+- labels for the x and y axes and a meaningful title
+- a description of the relationship between the two variables
+
+```{r}
+
+```
+
+### How to use the regression line to predict scores?
+
+In SPSS, the value of the regression line is conveniently provided with the plot and you had no issue computing the predicted anxiety score for an exam score of 80. How do we do that in R? Don't worry if what follows will feel a bit too complicated. At this step, you only need to understand how we can achieve this information with R.
+
+**Step 1: Building a linear model**
+
+We will use the `lm()` function to build a linear regression model. At this stage we are using it to understand the relationship between exam performance and anxiety.
+
+The arguments (parameters) of `lm()` function:
+
+formula – The formula to be applied for the linear model, it should be in the form y (dependent variable - e.g., anxiety) ~ x1 (independent variable - e.g., exams core) 
+data – The object containing your data - usually a dataframe
+
+We want to understand how exam performance is impacted by anxiety and so we will model exam performance as a function of anxiety using the formula `Exam ~ Anxiety`
+
+```{r}
+examAnxiety_lm <- lm(Anxiety ~ Exam Score, data = examAnxiety)
+examAnxiety_lm
+```
+**Step 2: Extracting the estimated values of the linear model**
+
+The result of fitting the linear model to the data are two estimated values:
+
+1) The intercept - in our case the average estimated anxiety with a value of `90.8682`
+2) A slope - tells you how much change in the y-variable (anxiety score) is caused by a unit change in x-variable. (exam score) `-0.2921`.
+
+**Step 3: Use the linear model equation and the estimated values from the linear model**
+
+Here's an exemplified version of the linear model equation:
+
+<p class="alert alert-info">
+Yi = β0 + β1*Xi 
+</p>
+
+We are trying to predict Yi, the anxiety of a person i, based on their exam score Xi.  
+β0 represents the overall anxiety (the intercept) and β1 the slope estimated value associated with exam score.
+
+For an exam score of 80 (that is, Xi = 80), what is the predicted anxiety score? Let's use the formula and replace the value we already know from the model.
+
+```{r}
+y = 90.8682 + -0.2921 * 80
+
+y
+```
+
+The predicted anxiety score of a person who obtained an 80% exam performance score is 67.5002.
+
+### Task 2: Predict the anxiety 
+
+It's your turn now. What's the predicted anxiety score for a person who achieved a 20 exam score?
+
+```{r}
+
+```
+
+What can you lean from these values? Put them in relation to the scatterplot you've drawn.
+
+
+## Task 3: Testing for normality
+
+Our goal is still to compute correlation analyses between exam performance and anxiety, as well as between exam performance and revision. In the next step, we need to test for the assumption of normality so that we can decide what kind of correlation analysis we will conduct.
+
+For each of the following three tasks, please:
+
+1) Draw histograms to show the distribution of the variables. Use either the `hist()` function or the `ggplot()` function. 
+2) Conduct the appropriate normality test. Keep in mind the sample size (N = 103) when you make the decision. If you need a refresher, take a look at the second week's script.
+3) Report the results of each test
+
+### Task 3.1. : Test anxiety scores for normality
+
+### Task 3.2. : Test exam performance for normality
+
+### Task 3.3. : Test revision for normality
+
+## Task 4: Choosing the appropriate correlation test
+
+Based on the results of the previous tasks, you have hopefully reached the conclusion that none of the three variables are normally distributed. Choose the correlation test according to the following criteria:
+
+1) Data is not normally distributed
+2) Your sample size is large (N = 103)
+
+Don't forget the hypotheses we've come up in the beginning for each of the two analyses we want to conduct. These are essential for running the analyses:
+
+- **H1:** As *anxiety increases*, *exam performance* will *decrease.* (Anxiety + exam performance correlation)
+
+- **H2:** The *more time was spent revising*, the more the *exam performance will increase*. (Revision + exam performance correlation)
+
+
+```{r corr_anxiety_exam}
+# conduct the anxiety-by-exam performance correlation here
+```
+
+Please report the results of the anxiety-by-exam performance correlation here:
+
+```{r corr_revision_exam}
+# conduct the revision-by-exam performance correlation here
+```
+ 
+Please report the results of the revision-by-exam performance correlation here:
+
+## Task 5: Compute the R^2 value
+
+In the last script we have learned how to compute the **coefficient of determination, R^2**. It indicates the amount of variance in one variable that is accounted for/shared by another variable.
+
+
+### Task 5.1.: Compute the coefficient of determination, R^2 for anxiety and exam performance
+
+```{r r2_exam_anxiety}
+
+```
+
+What does the value you have computed mean? Interpret it please.
+
+### Task 5.2.: Compute the coefficient of determination, R^2 for revision and exam performance
+
+```{r r2_exam_revision}
+
+```
+
+What does the value you have computed mean? Interpret it please.
+
+# Correlation continued
+
+Here comes one more correlation exercise based on the the data file "Mydata.sav". It shows made-up data from managers and from employees about their number of friends, date of birth, their alcohol consumption (in units), their neuroticism scores (the higher the score, the more neurotic), and their annual income in GBP.
+
+Group 1 is represented by managers, Group 2 by employees
+
+```{r}
+employee_manager_data <- haven::read_sav("Mydata.sav")
+```
+
+Take a look at the data
+
+```{r}
+head(employee_manager_data)
+```
+
+## Task 1: Plot a bar graph 
+
+- Plot the mean alcohol consumption on the y-axis, 
+- Plot the group (managers -1 and employees -2) on the x-axis
+- Include error bars (95 percent condence intervals of each mean) - remember which function you need to use?
+- Interpret the graph
+
+## Task 2: Plot a scatterplot
+
+- Plot the alcohol consumption on the y-axis
+- Plot the on the neuroticism (x-axis) 
+- The plot should be grouped by Group, that is by manager / employee (We used the layer facet_wrap() to achieve this. It is up to you to remember/figure out how to do it. (We've done this before)
+- Include the regression line 
+- Describe the relationship between the two variables
+
+## Task 3: Is there a reliable correlation between alcohol consumption and neuroticism?
+
+- State your hypothesis and its type.
+- Run normality analyses (keep in mind the sample size)
+- Run a correlation analysis (keep in mind the sample size and the type of data)
+
+## Extra tasks (not obligatory)
+
+- Build subsets for managers and employees
+- Run the correlation analyses again. What conclusion have you reached?
+
+

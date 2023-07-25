@@ -1,0 +1,523 @@
+---
+title: "Script_Week12: Revision"
+author: "Ana-Maria Plesca"
+date: "2023-06-23"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+#suppress the warnings and other messages from showing in the knitted file.
+knitr::opts_chunk$set(
+  fig.width  = 8, 
+  fig.height = 5, 
+  echo       = TRUE, 
+  warning    = FALSE, 
+  message    = FALSE,
+  cache      = TRUE
+)
+```
+
+# Introduction
+
+This script is meant to help you revisit most of the notions that we have worked with so far.
+You will work with datasets and use your blossoming statistical knowledge to decide, based on the characteristics of the data at hand, what the best path of statistical analysis would be. In addition, we will once again distinguish between parametric and non-parametric tests. Keep this in mind: it's always best to try and understand your data first - once you do that, picking the right test will be easier. 
+
+Please bear in mind that for this script you will be responsible for the set-up part (libraries, working directory)
+
+```{r}
+library(tidyverse)
+library(pastecs)
+```
+
+
+# Learning objectives
+
+1. Revise the statistical test types: from correlation until 1-way ANOVA.
+2. Train your understanding of datasets such that you gain confidence in decisions about statistical tests.
+3. Distinguishing between independent vs. dependent tests.
+4. Distinguishing parametric vs. non-parametric tests.
+
+
+# Part I: Assessing the relationship between two numerical variables
+
+In order to detect and quantify the relationship between two numerical variables, you can use correlation analyses. The correlation analysis tells you whether the variables of interest are related either:
+
+- positively (as the numerical variable x increases, the numerical variable y increases too. E.g., the more hours you spend studying, the higher the exam score you'll get)
+
+- negatively (as one numerical variable decreases, the other one increases. E.g., the more hours you stay awake, the less rested you feel)
+
+Remember that correlation does not mean causation and that the result of a stronger or weaker relationship between two numerical variables could also be the result of a third variable. 
+
+Remember:
+
+- The correlation coefficient has to lie between -1 and + 1.
+
+-  A coefficient of +1 indicates a perfect positive relationship, a coefficient of -1 indicates a perfect negative relationship, and a coefficient of 0 indicates no linear relationship at all
+
+- to compute the Pearson correlation coefficient between two numerical variables you can use the `cor()` function
+
+- to find out whether the correlation is significant, you need to conduct a correlation test.
+
+- which test should be conducted depends on whether the data at hand meets the assumptions of the parametric correlation test, which is **Pearson's correlation test**.
+
+- If the data does not meet all assumptions, non-parametric options are available: 
+
+  - **Spearman's correlation coefficient** : a non-parametric statistic that can be used when the data have violated parametric assumptions such as non-normally distributed data.
+  
+  - **Kendall's tau**, is another non-parametric correlation and it should be used rather than Spearman's coefficient when you have **a small data set with a large number of tied ranks**.
+
+- Use the `cor.test()` function to conduct correlation analyses. Keep in mind that you need to specify:
+
+  - If you are working with a *directed hypothesis*: 
+  
+    E.g.,: the more adverts people watch, the more they buy sweets*, then you need to make sure that the argument `alternative` which refers to your alternative hypothesis is set to  `greater` (e.g., `cor.text(variable1, variable2, alernative = "greater", method ="pearson"`)), because you are testing for a positive association. Had you wanted to test for a negative association, the you need to use "less" (e.g., `cor.text(variable1, variable2, alernative = "less", method = "pearson")`).
+
+## Task 1: Computing correlation and conducting a correlation test
+
+We will use data from Miller and Haden (2013) and we will look at different variables: reading ability, intelligence, the number of minutes per week spent reading at home, and the number of minutes per week spent watching TV at home. Your task is to explore the  the relationship between **Reading Ability** and **IQ**, but if you want to practice more, feel free to look at different combinations of variables.
+
+Here are the steps to follow in order to complete the task:
+ 
+- **Step 1:** Import the dataset `MillerHadenData.csv` to R 
+
+```{r}
+mhDat <- read.csv("MillerHadenData.csv")
+```
+
+- **Step 2:**Take a look at the data and understand its structure
+
+```{r}
+mhDat
+```
+
+- **Step 3:** Decide which correlation test is appropriate and check that the data meets the assumptions for this test
+
+The test to conduct would be Pearson's correlation. The assumptions to check are:
+
+Is the data interval, ratio, or ordinal?
+
+
+- Data needs to be **at least of interval type** for both variables
+
+`Assumption fulfilled ✅`
+
+- Both numerical variables are normally distributed.
+
+```{r}
+hist(mhDat$Abil)
+```
+
+```{r}
+hist(mhDat$IQ)
+```
+
+```{r}
+shapiro.test(mhDat$Abil)
+```
+```{r}
+shapiro.test(mhDat$IQ)
+```
+
+The assumption of normality is met because both Shapiro-Wilk tests yielded non-significant results, indicating that none of the two variables deviates significantly from normality. 
+
+`Assumption fulfilled ✅`
+
+**Step 4:** Decide whether your alternative hypothesis is one or two tailed. Clearly specify the null hypothesis and alternative hypothesis
+
+Null hypothesis: There is no relationship between IQ and the ability to read
+
+Alternative hypothesis: The higher the IQ, the better the ability to read (this is a one-tailed hypothesis)
+
+**Step 5:** Compute the correlation and specify the magnitude of the relationship between the two numerical variables and whether there is a positive/negative relationship. Next, please conduct the correlation test and report the results in full detail. 
+
+```{r}
+cor(mhDat$IQ, mhDat$Abil)
+```
+
+The strength of the relationship between Ability and IQ is medium and positive
+
+```{r}
+cor.test(mhDat$IQ, mhDat$Abil, alternative = "greater", method = "pearson")
+```
+The analysis yielded a significant result, such that there was a significant positive relationship between IQ and the ability to read (*t*(23) = 2.42, *p* (one-tailed) <.05).
+
+**Step 6:** Draw a scatterplot to illustrate the relationship between IQ and reading ability. Use `ggplot()` and please add a regression line to the plot to summarize the relationship between the two variables (it is optional whether the regression line is surrounded by CI based on the standard error )
+
+```{r}
+ggplot(mhDat, aes(IQ, Abil))+
+  geom_point(size = 2)+
+  geom_smooth(method = "lm", color = "green", se = T) +
+  labs(x = "IQ", y = "Reading ability",
+     title = "Relationship between IQ and reading ability")
+```
+
+# Part 2: Reviewing relationships between categorical and numerical variables - t-tests
+
+Previously, you've been reminded of the fact that you can use correlations to understand the relationship between two numerical variables. However, if you are rather interested to see how a categorical variable with *TWO* levels impacts the outcome variable, you need to use a t-test analysis.
+
+- **T-tests** allow you to compare two groups of data (or two means - the means of the groups you want to compare).
+
+Which t-test should be conducted depends on several things:
+
+A) You are working with **parametric data**:
+
+- If you have tested different groups of participants, your samples are independent, meaning that you have used a **between-subjects design** --> Use an **independent-samples t-test**
+
+**Example**: You are interested in how gender impacts sports performance in a running contest - you measure running speed for two gender groups: female and male participants. In order to find out whether the female vs. male athletes groups differ significantly from each other you can compare their means with an independent-samples (unpaired) t-test.
+ 
+- If you have exposeed the same participants to all (2) experimental conditions at different points in time (i.e., some saw condition 1 first, others saw condition 1 second), then you should use a **dependent-samples t-test**, because you have used a **repeated-measures design**.
+
+**Example**: You are interested in how the same participants perform in a running and a swimming race. The same participants take part at different points in time in a swimming, and a running race. You measure their speed in each condition. In order to find out whether the running vs. swimming performance of the same participants differ significantly you would use a dependent (paired) t-test.
+
+
+B) You are working with **non-parametric data**:
+
+- For **independent (between-participants) data** - **Wilcoxon Rank Sum test**
+
+- For **dependent (repeated-measures) data** - **Wilcoxon Signed Rank  test**
+
+
+## Task 2: Assumptions of parametric t-tests
+
+- **Step 1**: Please enumerate the assumptions that need to be met by the data in order for you to run an independent-samples t-test. Specify how you would check that these assumptions - mention which functions you would use and which tests you would conduct if necessary
+
+1. The sampling distribution should be normally distributed.
+- histograms with density curves, qq-plots, shapiro-wilk tests for samples under 30 participants, K-S tests with Lillefors correction for larger samples
+
+2. The outcome variable: continuous and at least interval.
+
+3. The scores measured in different conditions are independent.
+
+4. Homogeneity of variance. The variances within each of the two independent groups we are comparing should be similar.
+- Levene's test.
+
+- **Step 2**: Please enumerate the assumptions that need to be met by the data in order for you to run a dependent-samples t-test.  Specify how you would check that these assumptions - mention which functions you would use and which tests you would conduct if necessary
+
+1. The sampling distribution of the differences between the groups of scores should be normally distributed
+- histograms with density curves, qq-plots, shapiro-wilk tests for samples under 30 participants, K-S tests with Lillefors correction for larger samples
+
+2. The outcome variable: continuous and at least interval.
+
+## Task 3: Comparing two means
+
+The research question in this experiment is: Does the order of information affect juror judgments of guilt or innocence? We're investigating whether the decision a jury member makes about the innocence or guilt of a defendant could be influenced by when crucial evidence is presented during a trial. Participants listened to a series of recordings that recreated a 1804 trial of a man known as Joseph Parker who was accused of assuming two identities and marrying two women; i.e. bigamy. *Each participant listened to the same recordings of evidence*, presented by both prosecution and defense witnesses, and *were asked to judge how guilty they thought Mr. Parker was at 14 different time points during the experiment on a scale of 1 to 9*: 1 being innocent and 9 being guilty. The 14 time points came immediately after certain pieces of evidence.
+
+The manipulation in the experiment was that *the order of evidence was altered so that half the participants received one order of evidence and the other half received the second order of evidence*. Key to the order change was the time at which a critical piece of evidence was presented. This critical evidence proved that the defendant was innocent. The **Middle** group heard this evidence at Timepoint 9 of the trial whereas the **Late** group heard this evidence at **Timepoint 13.** **We will only focus on the Late group.**
+
+In this exercise, your task is to analyse the data to examine whether the *participants' ratings of guilt significantly changed before and after the presentation of the critical evidence in the Late condition*.  If the critical evidence, which proved the defendant's innocence, had the desired effect, then you should see a significant drop in ratings of guilt after hearing this evidence (Timepoint 13) compared to before (Timepoint 12).
+
+Our **alternative hypothesis** is thus that **there would be a significant decrease in ratings of guilt, caused by presentation of the critical evidence, from Timepoint 12 to Timepoint 13**.
+
+
+- **Step 1**: Load the dataset GuiltJudgements.csv into R and take a look at it. 
+
+```{r}
+guiltDat <- read_csv("GuiltJudgements.csv")
+```
+
+- **Step 2**: Wrangle the data (get the data in optimal shape for analysis)
+
+  - `filter()` only those participants from the `Late` condition.
+  
+  - `select()` only the Timepoints 12 and 13.
+  
+  - `rename()` these Timepoints  X12 and X13 as Twelve and Thirteen.
+  
+  - Here's a challange: Do this all as one pipe and store it in a tibble called lates. Your tibble, lates will have 150 rows and 4 columns.
+  
+```{r}
+lates <- guiltDat %>% 
+  dplyr::filter(Evidence == "Late") %>% 
+  dplyr::select(Participant, Evidence, `12`, `13`) %>% 
+  dplyr::rename("Twelve" = `12`, "Thirteen" = `13`) 
+```
+
+- **Step 3**: Compute descriptives for each of the two timepoints
+
+```{r}
+psych::describe(lates$Twelve)
+```
+```{r}
+psych::describe(lates$Thirteen)
+```
+
+- **Step 4**: What test would you run in order to compare the Twelve and Thirteen timepoints guilt ratings? Specify the test and check whether the data meets the assumptions for this test.
+
+A dependent t-test would be optimal in this condition, we have multiple participants contributing to the both timepoints, which makes the two timepoints groups dependendent.
+
+**Checking for the assumption of normality**
+
+**Creating difference scores between the two groups**
+
+```{r}
+lates <- lates %>% 
+  mutate(diff = Twelve - Thirteen)
+```
+
+**Cheking if the differences between the groups are normally distributed - descriptives**
+
+```{r}
+psych::describe(lates$diff)
+```
+**Drawing histograms and qq-plots**
+
+```{r}
+hist(lates$diff)
+```
+
+```{r}
+qqnorm(lates$diff)
+qqline(lates$diff)
+```
+
+Since our sample size is large, now N = 75, a Kolmogorov-Smirnov test with Lillefors correction  is the correct choice.
+
+```{r}
+nortest::lillie.test(lates$diff)
+```
+The distribution of the differences departs from the normality assumption, which is why we need to use a non-parametric test - the Wilcoxon Signed Rank test.
+
+- **Step 5**: Conduct the appropriate test based on the result and report the results
+
+```{r}
+guiltTest<-wilcox.test(lates$Twelve, lates$Thirteen, paired = TRUE)
+guiltTest
+```
+The results of the Wilcoxon signed rank test yielded a significant result, V = 1931, p < .001, indicating that the guilt ratings from timepoint 12 (M = 5.8, sd = 1.5 ) differed significantly from timepoint 12 (M = 4.04 , sd = 1.93), such that the guilt ratings registered for timepoint 13 were significantly lower than for timepoint 12.
+
+
+# Part III: Reviewing relationships between categorical and numerical variables - ANOVA
+
+You've just been reminded about the fact that **t-tests** in their parametric (dependent and independent) and non-parametric variants (Wilcoxon rank sum and Wilcoxon signed rank) allow you to compare **maximally 2 groups**.
+
+If you are interested in analysing data from more complex designs, **ANOVA** is one of the options you can chose. We have so far covered the topics of one-way anova, where there is **one experimental factor/categorical variable with several/more than two levels**. Of course, this is one of the flavours that ANOVA comes in, but this will do for the purpose of this revision
+
+Here are some basic things to keep in mind when it comes to ANOVA:
+
+- Compared to the t-test which enables you to compare just two groups, ANOVA enables you to compare several groups of data!
+
+Example: Let's say you are the developer of an app and you are interested to see how pleased people are with it and you recruit people from three different age groups. In this case, age is the experimental factor with three levels. 
+
+- **ANOVA is an omnibus test**, which means that it tests for the overall effect of a factor/independent variable. 
+
+- ANOVA requires you to think in advance about the groups you are considering. You can use **planned contrasts** to express your hypotheses.
+
+- After having conducted an ANOVA analysis, and found an effect (or not), you can explore the differences between all levels of your indepndent variable. When you have no specific hypotheses in mind about how different groups might differ between each other, or when you want to explore all differences between the groups (not just the planned ones), you need to run **post-hoc tests.**
+
+## Some words of advice
+
+- Always clearly state your hypotheses. Are they directional or are they not?
+
+- Plan you contrasts in accordance with your hypotheses
+
+- Make sure you understand the levels of your experimental factors. Do you have any control level? Make sure to specify everything, as this will help with the interpretation of the results
+
+## A word on post-hoc tests
+
+Let's revise the post-hoc tests that you can run and the functions/methods you can use:
+
+1. **Bonferroni-corrected post-hoc tests** with the `pairwise.t.test()` function
+
+2. **Tukey's HSD** (Tukey Honest Significant Differences, R function: `TukeyHSD()` for performing multiple pairwise-comparisons between the groups of interest.
+
+3. **Dunnett’s test** for when you define one of the groups of the experimental factor as the control group. Use the `DunettTest()` function
+
+### Task 1: Please describe how these three different tests are different from each other.
+
+Not everything about these tests is specified in the list above. Go back to your notes or older scripts or to Field's book and please specify the characteristics of each test. When should you use it?
+
+----
+
+<p class="alert alert-info"> 
+**ANOVA in a nutshell**: It allows you to compare **more than 2 groups**, much like any other statistical test, it requires you to be very specific about the hypotheses that you have. It is a test that will give you an overall effect of the independent variable - you can use *planned contrasts* to better understand your data if you have *specific hypotheses*. You can alternatively use *post-hoc* tests when you have no specific hypotheses in mind about how the groups might differ from each other and see where other significant differences may lie. Just because you have used planned contrasts, it does not mean that you cannot use post-hoc tests afterwards to assess whether and to what extent of significance all experimental groups differ from each other. </p> 
+
+
+---- 
+
+## Parametric vs. non-parametric?
+
+### Task 2: What's one function you can use to run parametric ANOVA analyses?
+
+`aov()`
+
+### Task 3: What's one function you can use for non-parametric ANOVA?
+
+This has been briefly mentioned in a previous script. What happens when the data at hand does not meet the assumptions of a one-way independent-samples ANOVA? Which function can you use?
+
+`oneway.test()`
+
+## Task 4: Conduct an ANOVA analysis
+
+Some research has suggested that people wearing superhero costumes might be more likely to harm themselves because of the unrealistic impression of invincibility that these costumes could create. For example, there are case studies of people reporting to hospital with severe injuries
+because of falling from windows or trying 'to initiate flight without having planned for
+landing strategies' (Davies, Surridge, Hole, & Munro-Davies, 2007).
+
+Imagine that we wanted to see whether different types of superhero costumes led to
+more severe injuries. We measured the severity of injury on a scale from 0 to 100 (0 = not
+at all injured, 100 = dead), and made a note of the type of costume a person was wearing.
+Let's also entertain the possibility that people fell into four groups: Spiderman, Superman, the Hulk, and Teenage Mutant Ninja Turtles
+
+Use one-way ANOYA and multiple comparisons to test the hypotheses that different costumes are associated with more severe injuries.
+
+- **Step 1**: Load the data `Superhero.dat` into R and understand its structure. Make sure the hero column is a factor and relabel it considering the following:
+
+* 1 represents a Spiderman costume
+* 2 represents a Superman costume
+* 3 represents a Hulk costume
+* 4 represents a Ninja turtle costume
+
+
+```{r}
+superhero <- read.delim("Superhero.dat")
+superhero
+```
+
+```{r}
+superhero$hero<-factor(superhero$hero, levels = c(1:4), labels = c("Spiderman","Superman", "Hulk", "Ninja Turtle"))
+```
+
+- **Step 2**: State clearly which are the dependent and independent variables. Describe the independent variable. How many levels does it have.
+
+The dependent variable is injury and is a continuous, ratio variable.
+The independent variable is hero, and has 4 levels.
+
+- **Step 3**: Generate descriptives for each costume
+
+```{r}
+by(superhero$injury, superhero$hero, stat.desc)
+```
+
+- **Step 4**: State your hypotheses (null hypothesis and alternative hypotheses)
+
+Hint: When you state your hypotheses and set contrasts think about the cake analogy that Field has proposed.
+
+Fields, 2013, p. 416:
+> Let's look at these rules in detail. First, if a group is singled out in one comparison, then
+it should not reappear in another comparison. The important thing to remember is that we
+are breaking down one chunk of variation into smaller independent chunks. So, in Figure
+10.5 contrast 1 involved comparing the placebo group to the experimental groups; because
+the placebo group is singled out, it should not be incorporated into any other contrasts.
+You can think of partitioning variance as being similar to slicing up a cake. You begin with
+a cake (the total sum of squares) and you then cut this cake into two pieces (SSM and SSR)'
+You then take the piece of cake that represents SSM and divide this up into smaller pieces.
+Once you have cut off a piece of cake you cannot stick that piece back onto the original
+slice, and you cannot stick it onto other pieces of cake, but you can divide it into smaller
+pieces of cake. Likewise, once a slice of variance has been split from a larger chunk, it
+cannot be attached to any other pieces of variance, it can only be subdivided into smaHer
+chunks of variance. Now, all of this talk of cake is making me hungry, but hopefully it
+illustrates a point. If you follow the independence of contrasts rule that I've just explained (the cake slicing!), and always compare only two pieces of variance, then you should always end up
+with one less contrast than the number of groups; there will be k - 1 contrasts (where k is
+the number of conditions you're comparing).
+
+H0: There are no differences in injuries as a function of the worn hero costume
+H1: There is a significant difference between cosumes representing fantastic non-human characters (Hulk and Ninja turtle) vs. fantastic human characters with superpowers (Spiderman and Superman)
+H2: There is a significant difference in injuries between people wearing a Spiderman vs. a Superman costume
+H3: There is a significant difference between Ninja turtle costume and a Hulk costume
+
+- **Step 5**: Define the contrasts and set them. Be mindful of the order of the levels of your factor when setting them up
+
+```{r}
+levels(superhero$hero)
+```
+
+```{r}
+# Humans vs non-humans
+contrast1 <-  c(1,1,-1,-1)
+
+# Superman vs Spiderman
+contrast2 <- c(-1, 1 , 0, 0)
+
+# Ninja vs. Hulk
+
+contrast3 <- c(0, 0 , -1, 1)
+
+contrasts(superhero$hero)<-cbind(contrast1, contrast2, contrast3)
+
+```
+
+- **Step 6**: Enumerate the assumptions that need to be met by the data and check whether the data at hand fulfills them
+
+1. The DV is interval or ratio data.
+
+The DV is ratio and thus fulfills this assumption.
+
+2. The observations should be independent.
+
+The observations are dependent, as different groups of participants were tested as a function of the type of costume that was worn.
+
+3. The residuals should be normally distributed
+
+- This will be tested in a later step after the ANOVA analysis is conducted
+
+4. The variance within groups should be homogeneous.
+
+```{r}
+car::leveneTest(injury ~ hero, data = superhero)
+```
+The variance across groups is not significantly different and thus the assumption is met
+
+- **Step 7**: Run the ANOVA analysis and get the summary of the output of the omnibus test. Report the results
+
+```{r}
+superheroANOVA <- aov(injury ~ hero, data = superhero)
+```
+
+
+```{r}
+summary(superheroANOVA)
+```
+The type of superhero costume that was worn did have a significant impact on the injuries suffered *F*(3,26) = 8.32, *p* < .001.
+
+- **Step 8**: Get the summary of the ANOVA analysis for the planned contrasts. Report the results along with the means and standard deviations for each category (from the descriptives)
+
+Hint: There is a specific summary function to use when you want to see the outcome of the ANOVA analysis considering the planned contrasts
+
+```{r}
+summary.lm(superheroANOVA)
+```
+There was a significant difference between:
+
+a) human vs. non-human heroes *t* = 4.23, *p* < .001
+b) spiderman (M = 41.62, sd = 12.21) vs. superman (M = 60.33, sd = 18.85) *t* = 2.68, *p* < .05 - wearing a superman costume led to significantly more grave injuries than wearing a spiderman costume
+
+
+Let's look at the descriptives to see which group led to more injuries
+
+```{r}
+psych::describe(injury~hero, data = superhero)
+```
+
+hero: Spiderman, M = 41.62, sd = 12.21
+--------------------------------------------------------------------- 
+hero: Superman, M = 60.33, sd = 18.85
+--------------------------------------------------------------------- 
+hero: Hulk, M = 35.38, sd = 13.38
+--------------------------------------------------------------------- 
+hero: Ninja Turtle, M = 26.25, sd = 8.15
+
+- **Step 9**: Conduct a Dunett's post-hoc test. Report the results along with the means and standard deviations for each category (from the descriptives). Also run Bonferroni-corrected pairwise comparisons and compare the outcomes. What do you notice with respect to the results. Are there any differences compared to the outcome of the planned contrasts and the Dunett test? If so, why?
+
+
+```{r}
+DescTools::DunnettTest(superhero$injury, superhero$hero)
+```
+
+
+```{r}
+pairwise.t.test(superhero$injury, superhero$hero, p.adjust.method = "bonferroni")
+```
+Significant differences between:
+
+- Wearing Superman (M = 60.33, sd = 18.85) costumes led to significantly worse injuries than Hulk costumes (M = 35.38, sd = 13.38): p <.001
+
+- Wearing Superman (M = 60.33, sd = 18.85) costumes led to significantly worse injuries than Ninja Turtle costumes. (M = 26.25, sd = 8.15): p <.001
+
+Due to the multiple comparisons, some contrasts are no longer significant. That happens because of the fact that the Bonferroni adjustment of the p-value is quite conservative.
+
+Let's compare it with the results of a Dunnett's test
+
+# End of script
+
+

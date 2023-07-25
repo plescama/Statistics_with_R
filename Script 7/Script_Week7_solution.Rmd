@@ -1,0 +1,488 @@
+---
+title: "Script_Week7: Non-parametric tests - solution script "
+author: "Ana-Maria Plesca"
+date: "2023-04-24"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+#suppress the warnings and other messages from showing in the knitted file.
+knitr::opts_chunk$set(
+  fig.width  = 8, 
+  fig.height = 5, 
+  echo       = TRUE, 
+  warning    = FALSE, 
+  message    = FALSE,
+  cache      = TRUE
+)
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+```
+
+```{r}
+install.packages("rstatix")
+# After you have installed the rstatix package please remove or comment out this line of code. Otherwise R will install the package every time you run the script. We do not want that
+library(haven)
+library(tidyverse)
+library(ggplot2)
+library(Rmisc)
+library(rstatix)
+library(car)
+```
+
+# Learning objectives
+
+1.  Learning to run non-parametric tests for independent (between-participants) data - Wilcoxon Rank Sum test
+2.  Learning to run non-parametric tests for dependent (between-participants) data - Wilcoxon Signed Rank  test
+3.  Enriching your skills of testing for assumptions - running grouped tests, computing grouped descriptive statistics
+
+# Introduction
+
+Welcome to the 7th week with R! Last week, you have learned how to compare means using parametric tests, as well as to test for their assumptions (by now, you are well versed in the art of testing for a test's assumptions). This week you will learn how to run non-parametric tests - for situations when your data does not meet the assumptions of the parametric tests. You will learn how to do this for dependent and independent data.
+
+**Task 1: Set your working directory**
+
+Remember to check if it worked using the `getwd()` function
+
+```{r}
+
+```
+
+
+# Non-parametric test for independent data: Wilcoxon Rank Sum test
+
+For independent data (between-subject data) you have learned how to run a Mann Whitney's test in SPSS. In R, you will perform a Wilcoxon Rank Sum test whenever you will want to run a non-parametric test on two indepdenent samples. Why is that different? Well, it is not different at all, because the Wilcoxon Rank Sum test is also known as a Mann-Whitney test. They are equivalent!
+
+We will run our tests on the following dataset:
+
+>A neurologist has collected data to investigate the depressant effects of
+certain recreational drugs. She tested 20 clubbers in all: 10 were given an ecstasy tablet to
+take on a Saturday night and 10 were allowed to drink only alcohol. Levels of depression were measured using the Beck Depression Inventory (BDI) the day after and midweek, on Wednesday. The data are in the file Drug.dat. (Field, 2013, p. 655)
+
+
+**Task 2: Load the Drug.dat file in R and save it in a variable named despressionDrugs**
+
+```{r}
+depressionDrugs <- read.delim("Drug.dat")
+```
+
+**Task 3: Check the structure of the data**
+
+```{r}
+str(depressionDrugs)
+```
+
+
+## What's our goal with the data? What do we want to test?
+
+Let's say we wanted to see whether the two groups (Ecstasy and Alcohol) differ in their depression levels on each of the two days. We have a total of 20 people that were tested: 10 in the Ecstasy group, 10 in the Alcohol group. 
+
+So far, we don't know anything about the present data or its sampling distribution. If we were to run a parametric test (which is always the first option), we could run the independent t-test. Remember that we need to test two main assumptions to see whether we can do that:
+
+- The normality assumption
+
+- The homogeneity of variance 
+
+Let's go ahead and do that.
+
+## Checking for assumptions
+
+By now you have checked for assumptions of parametric tests many times. I trust that you will be able to do this effortlessly. In the process please consider your sample size so you can run the right tests.
+
+### Normality assumption
+
+**Task 4: Check for the normality assumption**:
+
+- Building subsets for the Sunday and Wednesday data
+
+```{r}
+# Building subsets for the Sunday and Wednesday data
+sundayData <- depressionDrugs %>% 
+  select(drug, sundayBDI)
+
+wednesdayData <- depressionDrugs %>% 
+  select(drug, wedsBDI)
+```
+
+- Generating descriptive statistics for the sunday data. 
+
+We will be using the same `describe` function from the `psych` package. This time, we will instruct the function to compute descriptive statistics for each group, by using the formula operator `~`.
+
+```{r}
+#Computing descriptive statistics for the sunday subset
+summary_sunday <- psych::describe(sundayBDI ~ drug, data = sundayData)
+
+# Check result
+summary_sunday
+
+```
+
+**Task 5: Generate descriptive statistics for the Wednesday subset**
+
+```{r}
+#Computing descriptive statistics for the Wednesday subset
+summary_wednesday <- psych::describe(wedsBDI ~ drug, data = wednesdayData)
+
+# Check result
+summary_wednesday
+
+```
+
+- Run the relevant normality tests and report the results
+
+Since we are dealing with a relatively small sample (N = 20), a Shapiro-Wilk test is the appropriate choice. Unlike we have done so far, we will conduct the Shapiro-Wilk test for normality for each group within the sunday data. 
+
+To do that, we will use our trusted pipe operator to group the sunday data by drug and then perform the Shapiro-Wilk test on the result of the grouping. For that we will use the  `shapiro_test()` function [rstatix package], which provides a pipe-friendly framework to compute Shapiro-Wilk test.
+
+```{r}
+sundayData %>% 
+  group_by(drug) %>% 
+  shapiro_test(sundayBDI)
+```
+
+**Task 6: Run a Shapiro-Wilk test on the Wednesday data for each group**
+
+Hint: Follow the Sunday data example
+
+```{r}
+wednesdayData %>% 
+  group_by(drug) %>% 
+  shapiro_test(wedsBDI)
+```
+
+### Homogeneity other variance assumption
+
+- run the relevant test and report the results
+
+**Task 7: Run a test to check whether the variances are homogeneous across groups for the Sunday data**
+
+```{r}
+leveneTest(sundayBDI ~ drug, data = sundayData) 
+
+```
+
+**Task 8: Run a Levene's test for the Wednesday data**
+
+```{r}
+leveneTest(wedsBDI ~ drug, data = wednesdayData) 
+```
+Conclusions based on the normality and homogeneity tests: The data is not normally distributed across all groups, yet across groups the variability seems to be comparable.
+
+Based on the tests that you have conducted, you will hopefully have already reached the conclusion that the data does not meet the normality assumption. For this reason, we need to use a non-parametric test, which will be the Wilcoxon Rank Sum test
+
+## Running the Wilcoxon Rank Sum test
+
+For this purpose we will be using the `wilcox.test()` function. Since we are interested in running an independent samples test, we need to set the argument paired to False: `paired = FALSE`
+
+```{r}
+sunday_wilcox <- wilcox.test(data = depressionDrugs, sundayBDI ~ drug, paired = FALSE)
+```
+
+**Task 9: Run a Wilcoxon Ranked Sum test on the Wednesday data**
+
+```{r}
+wednesday_wilcox <- wilcox.test(data = depressionDrugs, wedsBDI ~ drug, paired = FALSE)
+```
+
+## Computing effect sizes and z-scores based on the test statistics
+
+>It is important to report effect sizes so that people have a standardized measure of the size of the effect you observed, which they can compare to other studies. R doesn't calculate an effect size for us, but we can calculate approximate effect sizes fairly easily.
+
+>R used a normal approximation to calculate the p-value; it did this via calculating a z score for the data. It doesn't report, or store, the z-value, but we can recover it from the p-value using the `qnormO` function. We can then convert the z-value into an effe·ct size estimate. The equation to convert a z-score into the effect size estimate, r. (Fields, 2013, p. 654.)
+
+We will use the following formula:
+
+$r = \frac{z}{\sqrt(N)}$
+
+
+Here's a function that computes the effect sizes for the tests we ran earlier based on the formula above. This function is adapted from Fields, 2013 (p. 665).
+
+```{r}
+rFromWilcox<-function(wilcoxModel, N){
+	z<- qnorm(wilcoxModel$p.value/2)
+	r<- z/ sqrt(N)
+ cat("z-score based on the test statistic, z = ", z, ". Effect Size, r = ", r)
+}
+```
+
+**Task 10: Compute the effect size based on the test you ran for the Sunday data**
+
+```{r}
+rFromWilcox(sunday_wilcox, 20)
+```
+
+**Task 11: Compute the effect size based on the test you ran for the Wednesday data**
+
+```{r}
+rFromWilcox(wednesday_wilcox, 20)
+```
+
+
+# Non-parametric test for dependent data: Wilcoxon Signed-Rank test
+
+Let's say that for each group (Ecstasy and Alcohol) you would like to compare the Wednesday with the Sunday scores separately. Without knowing anything about the data, you would first think to run a dependent (paired-samples) t-test. But before you can do that, you would compute difference scores (Wednesday scores minus Sunday scores), and then test whether these differences are normally distributed for each drug group.
+
+## Check for the normality assumption (normally distributed differences)
+
+**Task 12: Create subsets for each drug group and add a column with difference scores called `difference`**
+
+Hint: To create the difference column: Wednesday scores minus Sunday scores 
+
+```{r}
+ecstasyGroup <- depressionDrugs %>% 
+  filter(drug == "Ecstasy") %>% 
+  mutate(difference = wedsBDI - sundayBDI)
+
+ecstasyGroup
+```
+
+```{r}
+alcoholGroup <- depressionDrugs %>% 
+  filter(drug == "Alcohol") %>% 
+  mutate(difference = wedsBDI - sundayBDI)
+
+alcoholGroup
+```
+
+**Task 13: Generate descriptive statistics for both groups**
+
+
+```{r}
+ecstasy_summary <- psych::describe(ecstasyGroup)
+```
+
+```{r}
+alcohol_summary <- psych::describe(alcoholGroup)
+```
+
+**Task 14: Run normality tests and report the results**
+
+```{r}
+shapiro_test(ecstasyGroup$difference)
+```
+
+```{r}
+shapiro_test(alcoholGroup$difference)
+```
+The results of the tests have hopefully shown you that while the differences within the ecstasy group do not deviate significantly from the normality assumption (*W* = 0.9, *p* > .05), the differences within the alcohol group do differ significantly from the normality assumption (*W* = 0.8, *p* < .05).
+
+For this reason, we will run a non-parametric test for dependent samples, namely the **Wilcoxon Signed-Rank test**.
+
+## Running the Wilcoxon Signed-Rank test
+
+For this purpose we will be using the `wilcox.test()` function. Since we are interested in running a dependent-samples test, we need to set the argument paired to True: `paired = TRUE`. Be mindful of the fact that our data is in wide format, so we do not need to use the formula version of the function anymore. We will simply supply the wednesday and sunday BDI scores as the two first arguments (as the two paired groups that need to be compared).
+
+```{r}
+alcoholTest<-wilcox.test(alcoholGroup$wedsBDI, alcoholGroup$sundayBDI, paired = TRUE)
+
+alcoholTest
+```
+
+**Task 15: Run the Wilcoxon Signed-Rank test on the ecstasy group**
+
+```{r}
+ecstasyTest<-wilcox.test(ecstasyGroup$wedsBDI, ecstasyGroup$sundayBDI, paired = TRUE)
+ecstasyTest
+```
+
+**Task 16: Compute effect sizes for each of the two test statistics (for alcohol and ecstasy)**
+
+Use the function that was defined above and supply the necessary arguments
+
+```{r}
+rFromWilcox(alcoholTest, 10)
+```
+
+```{r}
+rFromWilcox(ecstasyTest, 10)
+```
+
+For the ecstasy group, depression levels were significantly higher several days after taking the drug (on Wednesday, Mdn = 33.50) than on the day after taking the drug (Sunday, Mdn = 17.50, V = 0, p < .05). By contrast, for the alcohol group we saw the opposite pattern: depression levels were significantly higher on Sunday (Mdn = 16.0) than on Wednesday (Mdn=7.50, V = 8, p < .05).
+
+# Extra practice
+
+I recommend that you solve the following exercises to consolidate your knowledge you have gained about non-parametric tests. To solve the following tasks please load the data file `lottery_question2.sav`
+
+# Extra task 1:
+
+ Use the data file lottery question2.sav which contains data from gamblers (N=40, 20 females and 20 males). The gamblers took part twice in the lottery and won more or less money depending on their luck (in euros). The data file contains the participant number (column 1), their winnings for the first gambling event (column 2), and for the second time they took part (column 3), as well as their gender (column 4).
+ 
+
+```{r}
+lottery_data <- read_sav("lottery_question2.sav")
+
+```
+
+
+ - 1.1. Which test would you use for comparing the mean winnings (in euros) for the first time the gamblers took part in the lottery relative to the second time they gambled? Justify your choice.
+ 
+Since the very same participants were tested twice/took part twice in the lottery, we have repeated-measures data. Considering this, it is justified to use a dependent (paired) t-test, in case all assumptions of the test will be fulfilled. The non-parametric alternative would be a Wilcoxon signed-rank test
+ 
+ - 1.2. Which assumptions must be fulfilled for this test? Enumerate them.
+ 
+ 1) The dependent variable is of continuous nature: either interval or ratio.
+ 
+ Our DV - lottery winnings (which could be from 0 to whatever value.)
+ 
+ Assumption fulfilled✅
+ 
+ 2) The independent variables are categorical:
+ 
+ Our independent variable is in this case the gambling event - lottery one and lottery two
+ 
+  Assumption fulfilled✅
+
+ 3) Since we are conducting a paired t-test, we need to check whether the 
+ difference scores are normally distributed.
+ 
+  - 1.3. Verify that the normality assumption is met and report the results. Make sure to generate descriptive statistics as well.
+ 
+ What's the size of our sample size?
+ 
+```{r}
+# We are computing the length of the unique participants found in the subject columb in our lottery dataset
+length(unique(lottery_data$subj)) 
+```
+ 
+ 40 - participants! The Shapiro-Wilk test is no longer really suitable. We need 
+ the Lillefors-corrected Kolmogorov Smirnov test
+ 
+```{r}
+nortest::lillie.test(lottery_data$diff)
+```
+ The differences between the two gambling event means (lottery1 minus lottery2
+scores) do not deviate significantly from normality (D(40)=.07, p > .05).
+ 
+ 
+ - 1.4. Conduct the appropriate test to compare the mean winnings for the first time vs the second time the gambles took part in the lottery. Report the results. Compute effect sizes too.
+ 
+```{r}
+# Mean and SD for lottery event 1
+mean_lot1 <- mean(lottery_data$lottery1)
+sd_lot1 <- sd(lottery_data$lottery1)
+
+# Mean and SD for lottery event 2
+mean_lot2 <- mean(lottery_data$lottery2)
+sd_lot2 <- sd(lottery_data$lottery2)
+```
+ 
+```{r}
+t.test(lottery_data$lottery1, lottery_data$lottery2, data = lottery_data, paired = TRUE)
+```
+
+Test scores at gambling event 1 (M=90.15, SD=11.20) were much higher
+than for event 2 (M=75.1, SD=19.49). Results from a paired-samples t-
+test showed that the two means differed significantly (t(39) = 4.61, p < .001,
+mean difference = 15.05).
+
+ 
+# Extra task 2:
+
+You would like to know whether male and female gamblers did differ in their winnings the first time they gambled. Create a barplot (including error bars) that compares the mean winnings in the lottery for men relative to women. State the means also in your own words. What does the graph (including the error bars) show?
+
+Female participants are coded as gender 2
+Male participants are coded as gender 1
+
+Plus points if you manage to recode the factor - Because we are using an SPSS file, it is rather difficult to recode it. 
+
+Hint: Try using `mutate()` and `ifelse()`
+
+```{r}
+as.factor(lottery_data$gender)
+
+lottery_data <- lottery_data %>% 
+  mutate(gender = ifelse(gender == 1, "Male", "Female"))
+
+lottery_data
+```
+
+
+Generate summary statistics
+
+```{r}
+lottery_summary <- summarySE(data = lottery_data, measurevar = "lottery1", groupvars = "gender")
+lottery_summary
+```
+
+Plotting lottery winnings as a function of gender
+
+```{r}
+ggplot(data = lottery_summary, aes(x = gender, y = lottery1, fill = gender))+
+  geom_bar(position=position_dodge(), stat="identity")+
+  geom_errorbar(aes(ymin=lottery1-ci, ymax=lottery1+ci), 
+                  width=.2,                             
+                  position=position_dodge(.9))+
+  labs(x = "Gender", y = "Average lottery winnings within the first event", 
+       title = "Average lottery winnings within the first event as a function of gender")
+```
+
+- 2.1. Which test would you use to compare whether the mean winnings differ
+significantly for men versus women? Please justify your response.
+
+You want to use a between-group (independent) t-test. The data are
+continuous and at least interval level which means a parametric test is
+appropriate. The comparison is between the two gender groups, thus requiring the independent
+version of the t-test.
+
+- 2.2. Enumerate and describe the assumptions which this test requires to be met.
+
+Dependent variable (DV): You have a continuous interval or ratio
+level dependent variable (e.g., scores measured from 0 to 100, reaction
+times)
+
+-  Independent variables (IV): your IVs are categorical (e.g., gender:
+male vs. female; age: young vs. older)
+
+- The observations in your conditions / groups should be independent (i.e.,
+you have different participants for each condition / group). Strictly
+speaking the independence refers to the errors: The errors / deviations of
+scores around the mean are independent within a group and between
+groups
+
+- Normality of the sampling distribution of the means for combinations
+of levels of the independent variable(s) (i.e., groups / conditions).
+This assumption refers to the sampling distribution not the raw scores;
+but if the raw scores are normally distributed, so is the sampling dis-
+tribution of their means
+
+- The variance of data points in each group around the group mean
+should be similar across all of the groups.
+
+- 2.3. Verify the assumptions and use the appropriate statistical test. Examine whether the mean lottery winnings were significantly different for men compared with women the first time these participants gambled. Report both the results of the assumption verification and the actual test statistics.
+
+
+Testing the normality assumption for the female lottery 1 subgroup
+
+```{r}
+lottery_data %>% 
+  filter(gender == "Female") %>% 
+  shapiro_test(lottery1)
+```
+
+Testing the normality assumption for the male lottery 1 subgroup
+
+```{r}
+lottery_data %>% 
+  filter(gender == "Male") %>% 
+  shapiro_test(lottery1)
+```
+
+Testing for homogeneity of variance
+
+```{r}
+levene_test(data = lottery_data, lottery1 ~ gender)
+```
+
+
+```{r}
+t.test(lottery1 ~ gender, data = lottery_data, paired = F )
+```
+
+
+# End of script
+
+Congrats on completing yet another R script! You now know a lot about computing parametric and non-parametric tests that allow you to test two dependent or independent groups. You are also already skilled in testing for the assumptions of the parametric tests. That's awesome. I stongly recommend you to read the Chapter 15 from Andy Field's *Discovering Statistics with R*. You will get more insight into non-parametric tests.
+
+Please save your script and make sure it runs error-free and that it can be knitted. Please make sure to upload it to Moodle. 
+

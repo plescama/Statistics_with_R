@@ -1,0 +1,285 @@
+---
+title: "Script_Week11: Practice session III"
+author: "Ana-Maria Plesca"
+date: "2023-06-16"
+output:
+  html_document:
+    toc: true
+---
+
+# Introduction
+
+This is the third and final practice session in R. Please work individually or in groups and make sure to hand out the script by 22.07.2023, 23:59. If you decide to work in groups to complete this practice session, please hand in your own, error-free knittable script. If questions arise, feel free to use the forum to discuss issues and ask questions.
+Please keep in mind that you need to hand in 2 out of 3 practice sessions (this holds both for the R and the SPSS part of the course in order for you to be able to take the exam)
+
+Good luck!
+
+
+# Script preparation
+
+**Loading packages**
+
+You will only be provided with a basic list of packages. Please add all relevant packages depending on the requirements of the tasks you are completing. Sometimes, you might encounter errors that some package is missing - this is a sign for you to load it, or to even install it and then load it.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(Rmisc)
+library(Hmisc)
+library(haven)
+options(scipen = 999) # no scientific notation
+```
+
+**Set up the working directory**
+
+```{r}
+
+```
+
+
+# Task 1
+
+## Description of the dataset:
+
+You've recently come across gender stereotypes indicating that women and men may differ in their performance in math tests. To assess the extent to which this is true, you conduct a test involving different-gender participants' performance on a math test. Use the data file `mathmarks1.sav` and think about which function you need in order for you to import the data into R.
+
+## Task 1.1.: Load the dataset into R and save it in a variable called `mathmarks1` and take a look at the data structure.
+
+```{r}
+mathmarks1 <- read_sav("mathmarks1.sav")
+```
+
+```{r}
+mathmarks1
+```
+
+Students (N=40, 20 females and 20 males) completed a math test and received credits (from 0 - 100) depending on their performance. The data file contains the **participant number** (column 1), **their credits in the test** (column 2), and **their gender** (column 3). 
+
+## Task 1.2.: Please recode the gender categories.
+
+If you knit the file, you will see that there are already labels in the data indicating that gender 1 stands for male, while gender 2 stands for female. 
+
+Hint: Recoding usually does not work if you are not working with a variable that is coded as a factor.
+
+```{r}
+mathmarks1$gender <- as.factor(mathmarks1$gender)
+```
+
+```{r}
+mathmarks1 <- mathmarks1 %>% 
+  mutate(gender = recode(gender,
+                                "1" = "Male",
+                                "2" = "Female"))
+```
+
+```{r}
+mathmarks1
+```
+
+## Task 1.3.: Create a barplot (including error bars) that compares the mean credits for men and women in Test 1. What does the graph show? What do the error bars suggest?
+
+```{r}
+summary_mathmarks1 <- summarySE(data = mathmarks1, measurevar = "test1", groupvars = "gender")
+```
+
+```{r}
+ggplot(data = summary_mathmarks1, aes(x = gender, y = test1, fill = gender))+
+  geom_bar(position=position_dodge(), stat="identity")+
+  geom_errorbar(aes(ymin=test1-ci, ymax=test1+ci), 
+                  width=.2,                             
+                  position=position_dodge(.9))+
+  labs(x = "Gender", y = "Average credits gained in a math test", 
+       title = "Average credits gained in a math test as a function of gender")+
+  scale_fill_brewer(palette = "Reds")
+
+```
+
+From the barplots below we learn that on average, the female students gained higher test scores in the mathematics test compared to the male students. The error bar is much narrower for female students compared to the male students, indicating that the measured mean is likely representative for the population mean. The 95% confidence intervals based on which the error bars are computed, do not overlap. This is an indication of the fact that the mean of math test credits measured for female students could be significantly different from the mean test credits measured for male students.
+
+
+### Task 1.4.: Which test would you use to compare whether the mean credits differ significantly for men compared with women in the math test? 
+
+Please justify your response.
+
+A between-group (independent) t-test would be an appropriate choice. The data are continuous and interval level which means a parametric test is appropriate. The comparison is between the two gender groups, meaning separate groups of participants, thus requiring the independent version of the t-test.
+
+### Task 1.5.: List all the assumptions that need to be met in order to run the statistical test.
+
+- 1. The dependent variable needs to be continuous and at least interval
+
+- 2. The independent variable needs to be categorical
+
+- 3. The observations within each group should be independent. More precisely, the errors should be independent The errors / deviations
+of scores around the mean are independent within a group and between
+groups.
+
+- 4. Normality of the sampling distribution. This assumption refers to the sampling distribution not the raw scores; but if the raw scores are normally distributed, so is the sampling distribution of their means.
+
+- 5. The variance of the observations should be similar across all groups (homogeneity of variance)
+
+### Task 1.6.: Verify the assumptions you listed
+
+- **1. The dependent variable needs to be continuous and at least interval**
+
+The data meets this assumption and is of ratio nature, since the test scores can possibly range from 0-100
+
+- **2. The independent variable needs to be categorical**
+
+The independent variable, our predictor, is gender and is indeed categorical. In this case it is represented by two categories: male and female.
+
+- **3. The observations within each group should be independent. More precisely, the errors should be independent The errors / deviations
+of scores around the mean are independent within a group and between
+groups.**
+
+Since different gender groups were tested, and different participants within each group (this is clear due to the participant number - column 1), the assumption is met
+
+- **4. Normality of the sampling distribution. This assumption refers to the sampling distribution not the raw scores; but if the raw scores are normally distributed, so is the sampling distribution of their means.**
+
+Considering our sammple size, which is 40, we will run a Kolmogorov Smirnov test with Lillefors correction, since the Shapiro-Wilk test is appropriate for samples up to 30 participants. However, we need to test the distribution of the scores for each gender subgroup separately
+
+```{r}
+female_mathmarks <- mathmarks1 %>% 
+  filter(gender == "Female")
+
+male_mathmarks <- mathmarks1 %>% 
+  filter(gender == "Male")
+```
+
+
+```{r}
+nortest::lillie.test(female_mathmarks$test1)
+```
+```{r}
+nortest::lillie.test(male_mathmarks$test1)
+
+```
+For each of the two different groups, the distribution did not deviate significantly from the normal distribution as evidenced by non-significant Kolmogorov-Smirnov tests (K-S test female: *D* = 0.13, *p* > .5, K-S test male: *D* = 0.12, *p* > .6).
+
+- **5. The variance of the observations should be similar across all groups (homogeneity of variance)**
+
+```{r}
+car::leveneTest(test1 ~ gender, data = mathmarks1)
+```
+
+The variance of data points around the group mean was homogeneous according to the Levene's test, which turned out non-significant (*F* = 3.03, *p* > .05).
+
+In conclusion, the data meets the assumptions for an independent t-test.
+
+## Task 1.7.: Run the test
+
+```{r}
+t.test(test1 ~ gender, data = mathmarks1, paired = FALSE)
+```
+
+The test scores for men and women differed significantly (t(30.4)=-5.04, p < .001). The mean difference between the groups was approx. 14 and women's average mathematics test credits were higher (87.15) than men's (73.15).
+
+# Task 2: Working with scores from two math tests
+
+For the purpose of the second task, you will work with the dataset from file `mathmarks2.sav`. 
+
+## Task 2.1.: Load the data into R and save it in a variable called `mathmarks2`. Take a look at at the data.
+
+```{r}
+mathmarks2 <- read_sav("mathmarks2.sav")
+```
+
+```{r}
+mathmarks2
+```
+
+## Task 2.2.: Recode the gender factor once again.
+
+```{r}
+mathmarks2$gender <- as.factor(mathmarks2$gender)
+
+mathmarks2 <- mathmarks2 %>% 
+  mutate(gender = recode(gender,
+                                "1" = "Male",
+                                "2" = "Female"))
+
+mathmarks2
+```
+
+## Task 2.3.: Plot the data
+
+Transform the data into long format and save it in a new variable. Plot the data via a barplot with 95% CI error bars and use facetting to explore the differences between the two tests visually. Describe the barplot.
+
+Hint 1: Essentially you need to squish the test 1 and test 2 columns into a single column and have the test scores shown in a separate column.
+
+Hint 2: There is a special layer for ggplot() that allows you to work with facets called `facet_wrap()`
+
+```{r}
+mathmarks2_longer <- mathmarks2 %>% 
+  pivot_longer(cols = 2:3, names_to = "test", values_to = "credits")
+```
+
+```{r}
+summary_mathmarks2 <- summarySE(data = mathmarks2_longer, measurevar = "credits", groupvars = c("gender", "test"))
+```
+
+```{r}
+ggplot(data = summary_mathmarks2, aes(x = gender, y = credits, fill = gender))+
+  geom_bar(position=position_dodge(), stat="identity")+
+  geom_errorbar(aes(ymin=credits-ci, ymax=credits+ci), 
+                  width=.2,                             
+                  position=position_dodge(.9))+
+  labs(x = "Gender", y = "Average credits gained in a math test", 
+       title = "Average credits gained in a math test as a function of gender")+
+  scale_fill_brewer(palette = "Reds")+
+  facet_wrap(~test)
+
+```
+
+## Task 2.4.: Compute average test scores for each test, disregarding gender.
+
+```{r}
+summary_mathmarks_test <- summarySE(data = mathmarks2_longer, measurevar = "credits", groupvars = "test")
+summary_mathmarks_test
+```
+
+## Task 2.5.: Which test would you conduct to compare the mean performance in test 1 versus test 2? Please justify your choice.
+
+All of the participants (male and female) took both tests (test 1 and test2).
+When we compare the mean between the two tests, we are comparing repeated measures within the same participants. For that reason you want to chose a dependent t-test.
+
+## Task 2.6.: Which assumptions need to be met for this test? Enumerate them
+
+- **1. The dependent variable needs to be continuous of at least interval nature.**
+
+- **2. The independent variable needs to be categorical.**
+
+- **3. These difference scores between conditions should be approximately normally distributed.**
+
+## Task 2.7.: Check whether the assumptions are met by the data.
+
+- **1. The dependent variable(s) need to be continuous of at least interval nature.**
+
+This assumption is met by the data because the two outcome variables, test 1 and 2 
+
+- **2. The independent variable needs to be categorical.**
+The independent variable is indeed categorical
+
+- **3. These difference scores between conditions should be approximately normally distributed.**
+
+```{r}
+# Computing difference scores
+mathmarks2 <- mathmarks2 %>% 
+  mutate(diff = test1 - test2)
+```
+
+```{r}
+nortest::lillie.test(mathmarks2$diff)
+```
+The differences between the two sets of test scores (test1 minus test2 scores) do not
+deviate significantly from normality (D(40)=.07, p = .9).
+
+## Task 2.8.: Run the statistical test and report the results.
+
+```{r}
+t.test(mathmarks2$test1, mathmarks2$test2, paired = TRUE)
+```
+The result of the dependent t-test has shown that participants performed much better in test 1 (M=80.15, SD=11.20) than in test 2 (M=65.1, SD=19.49). Results from a paired-samples t-test showed that the two test means differed significantly (t(39)=4.61, p < .001, mean difference = 15.05). 
+
+# End of script
+
+
+

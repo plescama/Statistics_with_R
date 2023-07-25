@@ -1,0 +1,74 @@
+Task 1:
+```{r}
+ggplot(spider_long_summary, aes(x = Condition, y = Anxiety, fill = Condition))+
+  geom_bar(position = "dodge", stat = "summary", fun = "mean")+ 
+    geom_errorbar(aes(ymin=Anxiety-ci, ymax=Anxiety+ci), 
+                  width=.2,                              
+                  position=position_dodge(.9))+
+  labs(x = "Condition", y = "Average anxiety score", fill = "Group", 
+       title = "Average anxiety score as a function of exposure to depicted vs. real spiders")+ 
+  scale_fill_brewer(palette = "Purples")
+
+```
+
+Task 2:
+
+Assuming that the data we are looking at comes from a within-participants design:
+
+On average, when participants were exposed to real spiders, they expressed higher levels of anxiety compared to conditions when they have seen a depicted spider. By having reduced individual variation (e.g., with respect to natural levels of anxiety), the 95% confidence error bars shrank visibly. The comparably shorter error bars suggest that we can be more confident that the true population mean associated with each condition lays within the marked confidence interval. 
+
+
+- **Task 3**: Check if the scores are normally distributed and report the result of the test you have chosen to conduct. You need to conduct separate tests for each condition group. You can either subset your data into two groups using the `filter()` function, or reshape the data using `pivot_wider()`. Use the help section or Google to make it easier to figure out which arguments to supply to the function of your choosing. If you are up for a challange, complete this task both ways. 
+
+Since we are dealing with a small sample, we will conduct a Shapiro-Wilk test
+
+```{r}
+#Option 1: building subsets
+picture_subset <- spiderLong %>% 
+  filter(Group == "Picture")
+
+real_subset<- spiderLong %>% 
+  filter(Group == "Real")
+
+# Conducting a normality test for the picture subset
+shapiro.test(picture_subset$Anxiety)
+
+# Conducting a normality test for the real subset
+shapiro.test(real_subset$Anxiety)
+```
+
+```{r}
+# Option 2: reshape the data
+spiderWider <- spiderLong %>% 
+  pivot_wider(names_from = Group, values_from = Anxiety)
+
+# Conducting a normality test for the picture subset
+shapiro.test(spiderWider$Picture)
+
+# Conducting a normality test for the real subset
+shapiro.test(spiderWider$Real)
+
+```
+
+- **Task 4**: Decide whether the data fulfills this assumption and motivate why.
+
+The data fulfills this assumption because we are working with assumptions score, which could also be categorized as ratio data with a true 0 point.
+
+ **Task 5**: Decide whether the data fulfills this assumption and motivate why.
+ 
+Assuming that different participants were assigned separately to one of the two conditions, the data does fulfill this assumption.
+
+- **Task 6**: Test whether the variance is equal within the picture and the real group. What test did you use for that? 
+Hint 1: The name of the test for homogeneity of variance starts with L. 
+Hint 2: Either Google this, or look in the script for week 2.
+
+```{r}
+car::leveneTest(Anxiety ~ Group, data = spiderLong)
+```
+
+Levene's test yielded a non-significant result (*F* = .02, *p* = )
+
+
+
+
+

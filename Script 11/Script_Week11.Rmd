@@ -1,0 +1,108 @@
+---
+title: "Script_Week11: Practice session III"
+author: "Ana-Maria Plesca"
+date: "2023-06-16"
+output:
+  html_document:
+    toc: true
+---
+
+# Introduction
+
+This is the third and final practice session in R. Please work individually or in groups and make sure to hand out the script by 22.07.2023, 23:59. If you decide to work in groups to complete this practice session, please hand in your own, error-free knittable script. If questions arise, feel free to use the forum to discuss issues and ask questions.
+Please keep in mind that you need to hand in 2 out of 3 practice sessions (this holds both for the R and the SPSS part of the course in order for you to be able to take the exam)
+
+Good luck!
+
+
+# Script preparation
+
+**Loading packages**
+
+You will only be provided with a basic list of packages. Please add all relevant packages depending on the requirements of the tasks you are completing. Sometimes, you might encounter errors that some package is missing - this is a sign for you to load it, or to even install it and then load it.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+options(scipen = 999) # no scientific notation
+```
+
+**Set up the working directory**
+
+```{r}
+
+```
+
+
+# Task 1
+
+## Description of the dataset:
+
+You've recently come across gender stereotypes indicating that women and men may differ in their performance in math tests. To assess the extent to which this is true, you conduct a test involving different-gender participants' performance on a math test. Use the data file `mathmarks1.sav` and think about which function you need in order for you to import the data into R.
+
+## Task 1.1.: Load the dataset into R and save it in a variable called `mathmarks1` and take a look at the data structure.
+
+
+
+
+Students (N=40, 20 females and 20 males) completed a math test and received credits (from 0 - 100) depending on their performance. The data file contains the **participant number** (column 1), **their credits in the test** (column 2), and **their gender** (column 3). 
+
+## Task 1.2.: Please recode the gender categories.
+
+If you knit the file, you will see that there are already labels in the data indicating that gender 1 stands for male, while gender 2 stands for female. 
+
+Hint: Recoding usually does not work if you are not working with a variable that is coded as a factor.
+
+
+## Task 1.3.: Create a barplot (including error bars) that compares the mean credits for men and women in Test 1. What does the graph show? What do the error bars suggest?
+
+
+### Task 1.4.: Which test would you use to compare whether the mean credits differ significantly for men compared with women in the math test? 
+
+Please justify your response.
+
+
+### Task 1.5.: List all the assumptions that need to be met in order to run the statistical test.
+
+
+### Task 1.6.: Verify the assumptions you listed
+
+
+## Task 1.7.: Run the test
+
+
+# Task 2: Working with scores from two math tests
+
+For the purpose of the second task, you will work with the dataset from file `mathmarks2.sav`. 
+
+## Task 2.1.: Load the data into R and save it in a variable called `mathmarks2`. Take a look at at the data.
+
+## Task 2.2.: Recode the gender factor once again.
+
+## Task 2.3.: Plot the data
+
+Transform the data into long format and save it in a new variable. Plot the data via a barplot with 95% CI error bars and use facetting to explore the differences between the two tests visually. Describe the barplot.
+
+Hint 1: Essentially you need to squish the test 1 and test 2 columns into a single column and have the test scores shown in a separate column.
+
+Hint 2: There is a special layer for ggplot() that allows you to work with facets called `facet_wrap()`
+
+
+## Task 2.4.: Compute average test scores for each test, disregarding gender.
+
+
+## Task 2.5.: Which test would you conduct to compare the mean performance in test 1 versus test 2? Please justify your choice.
+
+
+## Task 2.6.: Which assumptions need to be met for this test? Enumerate them
+
+
+## Task 2.7.: Check whether the assumptions are met by the data.
+
+
+## Task 2.8.: Run the statistical test and report the results.
+
+
+# End of script
+
+
+

@@ -1,0 +1,488 @@
+---
+title: "Script_Week10: One-way repeated-measures ANOVA"
+author: "Ana-Maria Plesca"
+date: "2023-06-02"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+#suppress the warnings and other messages from showing in the knitted file.
+knitr::opts_chunk$set(
+  fig.width  = 8, 
+  fig.height = 5, 
+  echo       = TRUE, 
+  warning    = FALSE, 
+  message    = FALSE,
+  cache      = TRUE
+)
+```
+
+
+# Learning objectives
+
+1. Learning how to conduct a one-way ANOVA for repeated-measures data.
+2. Dealing with data that does not meet the sphericity assumption.
+
+
+# Introduction
+
+So far, you have learned to use ANOVA to compare several means coming from independent groups - in other words you already know how to use ANOVA when data comes from entities that were subjected to different experimental conditions (different individuals/objects of interest contributed to different means). Example: Group A is subjected to condition 1, and group B is subjected to condition 2.
+
+This week, you will use R to help you conduct an ANOVA analysis for repeated-measures data. In other words, you'll be able to conduct analyses of variance for data stemming from the same entities being subjected/exposed to multiple conditions at different points in time. Example: participant 1 is subjected to first to condition 1 and then to condition 2, while participant 2 to is subjected first to condition 2 and then to condition 1. The fact that the two participants see all conditions but in different order means that the items and the conditions they appear in are counterbalanced.
+
+
+# Script prep
+
+Loading the necessary packages
+
+```{r}
+# This function checks if you have already installed the ez package. If yes, it is called to the library. If not, it is installed.
+if (!requireNamespace("ez")) {
+  stop(install.packages("ez"))
+} else {
+  library("ez")
+}
+
+if (!requireNamespace("nlme")) {
+  stop(install.packages("nlme"))
+} else {
+  library("nlme")
+}
+
+if (!requireNamespace("multcomp")) {
+  stop(install.packages("multcomp"))
+} else {
+  library("multcomp")
+}
+
+
+library(tidyverse)
+library(ggplot2)
+library(Rmisc)
+library(emmeans)
+library(rstatix)
+
+options(scipen = 999) # removes scientific notation from the output
+```
+
+Set up your working directory
+
+```{r}
+# Please adjust the path accordingly
+```
+
+# Running a one-way repeated-measures ANOVA
+
+## Entering and understanding the data
+
+This week, the focus of our attention will be a dataset that Andy Field has created based on a reality TV-show called "*I'm a celebrity, get me out of here!"*. In this show, celebrities go to exotic places and have to face extreme trials.
+
+Imagine that eight celebrities were tested in such an extreme trial, and they ate four different unusual foods (stick insect, kangaroo testicle, fish eye and witchetty grub) in counterbalanced order (this means that the order in which the animals will be eaten will be randomized for each participant). On each occasion the time it took each celebrity to retch (vomit), was measured in seconds. This is a repeated-measures design because every celebrity eats every type of food. The independent variable was the type of food that was eaten and the dependent variable was the time taken to retch. 
+
+**- Task 1:** Load the data in R using the `Bushtucker.dat` file. Save it in a variable called `bushtuckerDat`
+
+```{r}
+
+```
+
+Let's gain a better understanding of the data.
+
+**- Task 2:** Explore the data: Look at the columns and their contents and specify the data format.
+
+```{r}
+
+```
+There are 5 columns with 8 observations each. There are 8 participants in total and each of them ate one of the 4 animals which are represented by separate columns that contain the time to retch. The data is in wide format.
+
+**- Task 3:** Compute the mean amount of time to retch for each celebrity, as well as the variance in the time taken to retch. 
+
+Note: The mean amount of time to retch informs you about the average participant "performance", whereas the variance will result partly from the experimental manipulation (some animals might be more gross than others) and from the individual differences of the participants.
+
+Hint: You can group the data and then use the `summarize()` function from the `dplyr` package to compute the average time to retch for each participant and all the things they ate, along with the variance associated with this score. Find out which functions you need in order to compute the mean and the variance.
+
+```{r}
+
+```
+
+**- Task 4:** Compute the average time to retch for each animal that was eaten
+
+Hint 1: Previously, you have grouped the data by participant to compute average retching times for each participant. Grouping is necessary in this case too, but before you get there, you need to transform the data.
+
+Hint 2: Grouping by participant in Task 3 was possible because there was a column which contained the information about participants. What is the difference in the way data is organized for participants vs. animals right now? What and how should you change in the data in order to group by animal?
+
+```{r}
+# Step 1
+```
+
+```{r}
+# Step 2:
+
+```
+
+Explore the behavior of the participants visually.
+
+**- Task 5:** Use a barplot to illustrate the average time to retch for each participant. Please include 95% error bars. What does the plot tell you. Describe it.
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
+**- Task 6:** Create a boxplot illustrating the average time to retch as a function of the animal that was eaten. Please add error bars too. Describe the plot. What do the error bars tell you?
+
+```{r}
+
+```
+
+
+
+### Planned contrasts
+
+Conducting an ANOVA test, means that you will conduct an omnibus test that only tells you whether your experimental manipulation had an effect on your outcome variable, but it will not tell you which levels of your experimental manipulation differed from each other.
+
+Remember that we can use planned contrasts to break down the main effect and find out where the differences between the different levels of our experimental factor lie.
+
+Also keep in mind that planned contrasts require you to think in advance about how the different levels of the experimental factor might lead to different outcomes. 
+
+>Imagine that we predicted that because eyes and testicles resemble human body parts, celebrities would be more disgusted by eating them than witchetty grubs and stick insects (which are eaten whole and don't resemble anything very human). Our first contrast might, therefore, compare the fish eye and kangaroo testicle (combined) to the witchetty grub and stick insect (combined). We need a second contrast then to separate the fish eye from the kangaroo testicle, and a third contrast to separate the witchetty grub from the stick insect. (Field, 2013, p. 568)
+
+**- Task 7:** Before you set your contrasts, please make sure to check the order of the levels of your factor. Relevel them to the following order: "stick_insect", "kangaroo_testicle", "fish_eye", "witchetty_grub". Make sure your changes worked.
+
+Hint 1: Is the animal column a factor already?
+Hint 2: Use the function levels() to check the order of the levels of a factor
+Hint 3: The factor() function has an argument that lets you re-order the levels of a factor
+
+```{r}
+```
+
+```{r}
+
+```
+
+```{r}
+```
+
+
+**- Task 8:** Set the contrasts according to the description above. In a first step, please create variables representing each contrast  and then bind these variables together and set them as contrasts. If you are feeling stuck after several attempts, check the solution here: https://box.hu-berlin.de/f/0db07388a98b40b1be71/. 
+
+*Please take into consideration the order of the levels of your factor when defining contrasts.*
+
+Some things to consider: 
+
+- positive weights are compared with negative weights 
+
+- whenever a level of a factor does not play a role in a contrast, it receives a weight of 0.
+
+- positive and negative weights in a contrast must sum up to 0. 
+
+(e.g., when comparing the effects of caffeine intake on energy levels, a low dose could receive a -1 weight, a high dose a +1 weight).
+
+```{r}
+
+```
+
+## Option 1: Conducting an ANOVA analysis with the `ezANOVA()` function
+
+One of the options at your disposal is to use the function `ezANOVA() `from the `ez` package.
+
+>The advantage of this method is that it produces an output that resembles
+what you'll be used to seeing if you have ever attempted repeated-measures ANOYA
+using a different package (such as SPSS or SAS). It will also compute sphericity estimates and the aforementioned corrections for sphericity. (Field, 2013, p. 549)
+
+**- Task 9:** Check the help page `?ezANOVA()` and see how you could use this function. Try to think about which arguments you are going to use. Write them down in the code chunk and comment them out if you wish. 
+
+```{r}
+
+```
+
+Field, much like I, acknowledge that this function might feel challenging to use:
+
+>Note that some of these options take the form option = .(). Placing lists of variables within .() is just a convention of this function. It does not have any special significance, and does not have the power to turn you into a dragon. (Field, 2013, p. 549)
+
+**- Task 10:** Run the ANOVA analysis using the `ezANOVA()` function. 
+
+*Hint about function arguments:* you need arguments for your dependent variable, next an argument that uniquely identifies participants, next an argument for your within-participants factor, then a type argument, and an argument that allows you to get a nice detailed output. In addition, set the argument `return_aov()` to true. This last argument ensures that the model you will get after using the function will of of anova type.
+
+*Extra hint:* If you are working with balanced samples (no missing values in certain conditions), the type = 2 argument is the way to go. If you are interested in the ANOVA being approached similarly as in SPSS or SAS, set the value of the type argument to 3.
+
+
+```{r}
+
+```
+
+Take a look at the outcome variable:
+
+```{r}
+
+```
+### Understanding the output of the analysis
+
+The first pane of the output shows the order of the tables in the output: The second represents the ANOVA results, the third the outcome of the test for sphericity, and the fourth pane includes information about the  **Greenhouse and Geiser** (short GG) and **Huynh and Feldt** (HF) estimates and corrections brought to the p-values based on these corrections.
+
+In short: The function not only runs an ANOVA analysis, but also checks for the sphericity assumption and applies corrections, in case the assumption is violated. Your most important task is to understand the output and decide how you interpret the effect you've found.
+
+**1. Pane 2:** In order for us to trust the F value estimated by the ANOVA model, **Mauchly's test for sphericity** should be non-significant. The important column in the output is the one containing the significance value (p) and in this case the value, .047, is significant which is why we reject the assumption that the variances of the differences between levels are equal. In other words, the assumption of sphericity has not been met, *W* = 0.14, *p* = .047. What can we do? Check the fourth pane.
+
+**2. Pane 4:** We can work with two corrections (displayed in the fourth pane): **Greenhouse and Geiser** (short GG) and **Huynh and Feldt** (HF). These corrections are automatically estimated when running the ANOVA analysis with the `ezANOVA()` function. While the **Greenhouse and Geiser** is very conservative and sometimes misses the effects that genuinely exist, the **Huynh and Feldt** is more liberal and tends to accept values as significant when, in reality, they are not significant. 
+
+**3. Pane 3:** Shows the results of the ANOVA test:
+
+- *DFn*: showing the degrees of freedom for the Animal effect ($k-1$, where *k* is the number of conditions in which the *Animal* experimental manipulation appeared in)
+
+- *DFd*: the error degrees of freedom (computed as such:$(n-1)(k-1)$, where *n* represents the number of participants, and *k* the number of conditions of our experimental factor)
+
+- *SSn*: model sum of squares (SSM) -  tells us how much of the total variability is explained by the experimental effect.
+
+- *SSd*: error term, which is the amount of unexplained
+variation across the conditions of the repeated-measures variable.
+
+- *F*: The F-ratio is obtained by dividing the mean squares for the experimental effect by the error mean squares. The F-statistic represents the ratio of systematic to unsystematic variance. 
+
+- *p*: the p-value informs us about the significance of our effect. The F-statistic, *F* = 3.79 is compared against a critical value for 3 and 21 degrees of freedom. This resulted in a significance of *p* = .026
+
+- *p<.05*: The asterisk (*) confirms the significance of our finding. A single asterisk indicates that p-value is below .05, a double asterisk indicates that the p-value is below .01, and finally a triple asterisk indicates that the p-value is below .001.
+
+Based on the output of the ANOVA test *F* = 3.79, *p* = .026, we could conclude that there was a significant difference between the four animals and how fast their ingestion induced retching. However:
+
+- we don't know which animals differed from each other 
+- the test has shown that the data violates the assumption of sphericity, which makes the F-statistic unreliable.
+- due to non-spherical data, we need to turn to alternatives and see what options the two aforementioned corrections for non-sphericity offer us. 
+
+4. Back to Pane 4: These estimates (**Greenhouse and Geiser** (short GG) and **Huynh and Feldt** (HF)) are used to apply a correction to the degrees of freedom that are used for assessing the *F-ratio*. The closer the **GG** correction  is to 1, the more homogeneous the variances of the differences between conditions are. In a situation in which there are four conditions (4 animal types in our case) the lower limit  will be 1/(4-1), or .33. From the output, we find out that the calculated value of **GGe** is .533, which is closer to the lower limit, indicating that there is a deviation from sphericity. The output also contains the Huynh-Feldt estimate (**HFe** in the output), which is closer to 1.
+
+The bottom line is that our data is non-spherical and that this is confirmed not only by the significant Maulchy's test, but also by the fact that the GGe and HFe estimates are quite close to the lower bound. This makes the F-ratio unreliable.
+
+Luckily enough, R has already computed p-values that have been corrected using the Greenhouse-Geisser and Huynh-Feldt corrections - labelled p[GG], respectively p[HF]. While the Greenhouse-Geiss correction resulted in a non-significant p-value (p[GG] = .063), the Huynh-Feldt correction led to a significant p-value (p[HF] = .048) that is just below the significance threshold.
+
+**Let's revise**
+
+1. Our data is non-spherical (significant Maulchy's test).
+2. According to the ANOVA-test, there was a significant effect of Animal on retching time in seconds.
+
+3. However, due to the violation of the sphericity assumption, we cannot trust this outcome.
+
+4. R computed for us two p-values with additional corrections for non-sphericity - one of them is based on a conservative criterion (GG) and led to a non-significant result. The second correction (HF) for non-sphericity is known to be liberal and resulted in a significant p-value.
+
+This is what Field (2013, p. 572) advises us to do:
+
+>Stevens (2002) recommends taking an average of the two estimates, and certainly when the two corrections give different results (as is the case here) this can be useful. If the two corrections give rise to the same conclusion it makes little difference which you choose to report (although if you accept the F-statistic as significant you might as well report the more conservative Greenhouse-Geisser estimate to avoid criticism). Although it is easy to calculate the average of the two correction factors and to correct the degrees of freedom accordingly, it is not so easy to then calculate an exact probability for those degrees of freedom. Therefore, should you ever be faced with this perplexing situation (and to be honest that's fairly unlikely) I recommend taking an average of the two significance values to give you a rough idea of which correction is giving the most accurate answer. In this case, the average of the two p-values is (.063 + .048)/2 = .056. **Therefore, we should probably go with the Greenhouse-Geisser correction and conclude that the F-ratio is non-significant.**
+
+### Planned contrasts
+
+You have already defined planned contrasts and you already know that you can break down the effect you found in ANOVA with planned contrasts that you've thought about before you ran the analysis.
+
+Even though the ANOVA test did not yield a significant result, let's say you would still like to look at the differences between each level.
+
+I wish I could tell you that you could use the contrasts you have already defined, but you unfortunately cannot. You could look into post-hoc contrasts, but that's not any different from post-hoc tests. This happens because people haven't been using ANOVA as much as it was used before and R, along with the packages it works with has been mostly developed for different kinds of tests. 
+
+### Post-hoc tests
+
+The good news is that you can still break down the main effect in smaller pieces using pairwise t-tests corrected for multiple comparisons - this is a post-hoc test and it is appropriate for when we do not have specific hypotheses in mind. We need to add the option `paired = TRUE` to reflect the fact that means are dependent (so, we're asking for paired t-tests rather than independent t-tests) and to also specify the p-value adjustment method considering the multiple comparisons we will conduct between all 4 conditions - most of the times we will be using a Bonferroni correction.
+
+To get post hoc tests for the current data, execute:
+
+**- Task 11:** Use the `pairwise.t.test()` function to conduct the post-hoc test 
+
+```{r}
+
+```
+
+We can see that the time to retch was significantly different after eating a stick insect compared to a kangaroo testicle (*p* = .012) and a fish eye (*p* = .006) but not compared to a witchetty grub. The time to retch after eating a kangaroo testicle was not significantly different than after eating a fish eyeball or witchetty grub (both *p*-values > .O5). Finally, the time to retch was not significantly different after eating a fish eyeball compared to a witchetty grub (*p* > .05).
+
+
+A critical note: While the pairwise t-test is great at letting you know which levels of the factor differed from each-other significantly, unfortunately you cannot really determine from this output which type of animal led to the slowest retching for example. There are different functions out there that do a much better job, but most of them do not work for repeated-measures ANOVA analyses 
+
+One way to at least take a look at the retching means for each animal group is the following - please uncomment the line below before running the line of code. Also make sure to adjust the variable names and use your own - the bushtuckerLong variable is the data in long format.:
+
+```{r}
+#ezStats(data = bushtuckerLong, dv = .(TimeToRetch), wid = .(participant),  within = .(Animal), type = 3)
+```
+
+Therefore, the significant effect found between the stick insect and the kangaroo testicle and between the stick insect and the fish eye make sense now, since the largest mean differences exist exactly between these categories. Thus, we can claim that the celebrities we tested were significantly slower to regurgitate after eating stick insects compared to when they ate kangaroo testicles or fish eyes.
+
+## Option 2: Multilevel linear models (this part is optional!)
+
+As Field puts it (2013, p. 573):
+
+>The most complicated thing about the slightly more complicated way is trying to explain
+it; it is not actually that hard to do. The method we will use is known as a multilevel linear
+model, and the whole of Chapter 19 is dedicated to explaining these models.
+
+A multilevel model is simply a linear model, also called regression, which takes into consideration the dependency in the data (for instance the fact that there are multiple data points coming from the same participant). The best part about it is that you can forget your worries about the assumption of sphericity - it no longer matters for this type of analysis.
+
+Let's talk a bit about **linear regression** and pin down the most important facts:
+
+- When using linear regression, we try to model a continuous outcome variable (e.g., time to retch) as a function of a predictor/ fixed variable (e.g., animal eaten) and the regression line summarizes the relationship between the predictor and outcome variables. 
+
+A simple example of a linear model is:
+
+$Y_i=β_0+β_1X_i+e_i$
+
+Where $Y_i$ is the measured value of the dependent variable for observation $i$, modeled in terms of an intercept term plus the effect of predictor $X_i$, weighted by coefficient $β_1$ and error term $e_i$.
+
+- The regression line is represented by a slope and an intercept.
+
+Let's look at an example of data described by a regression line with an intercept ($β_0$) of 3  and a slope ($β_1$) with a coefficient of 2:
+
+```{r}
+set.seed(62)
+
+dat <- tibble(X = runif(100, 0, 6),
+              Y = 3 + 2 * X + rnorm(100))
+
+ggplot(dat, aes(X, Y)) +
+  geom_point() +
+  geom_abline(intercept = 3, slope = 2, color = "blue")+
+  labs(title ="Figure 1: Simple regression line")
+```
+
+Simply put, the slope represents the "steepness" of the line (consider the steepness of the blue line in Figure 1), as well as the change in y (the outcome variable) as a function of x (the predictor/fixed variable). The intercept indicates the value of y (outcome variable), where the value of x is 0.
+ 
+To gain a better understanding how slopes are represented graphically, take a look at Figures 2 and 3 below. In Figure 2, there are several regression lines with the same slope - same "steepness" and different intercepts. Figure 2 on the other hand shows how several regression lines look like when they have the same intercept, but different slopes
+
+```{r}
+ggplot(dat, aes(X, Y)) +
+  geom_point() +
+  geom_abline(intercept = 3, slope = 2, color = "green")+
+  geom_abline(intercept = 1, slope = 2, color = "pink")+
+  labs(title ="Figure 2: Regression lines with the same slopes, but different intercepts")
+```
+
+```{r}
+ggplot(dat, aes(X, Y)) +
+  geom_point() +
+  geom_abline(intercept = 3, slope = 2, color = "purple")+
+  geom_abline(intercept = 3, slope = 4, color = "orange")+
+  labs(title ="Figure 3: Regression lines with the same intercepts, but different slopes")
+
+```
+
+- Regression is mostly used when both the outcome and the predictor are represented by numeric, continuous variables, but it's of course possible to incorporate categorical factors into a regression model - in our case, the type of animal that was eaten.
+
+- The way to do this is to use contrasts, whereby the levels of our factor are coded by numbers. You are already familiar with this concept. 
+
+- The fact that we assign weights (numbers) to a factor's categories means that geometrically, it will be possible to place these categories in a coordinate system.
+
+- One of the assumptions of regression was that residuals (errors - $e_i$ in the regression line equation above) needed to be independent. Repeated-measures designs, as we have seen, have dependent data, therefore dependent residuals;
+
+- A multilevel model is an extension of regression that handles dependent data by explicitly modelling the dependency. It is, therefore, very well suited to repeated-measures experimental designs. One advantage of this approach is that we can continue to think about the analysis as a linear model; we just use a different function, `lme()`, rather than `aov()` or `ezANOVA()`.
+
+For the present purposes, we won't go into much detail about multilevel regression, but upon request, this can be discussed in richer detail in a separate session.
+
+**Our goals**
+
+- We are trying to predict the time taken to retch (`TimeToRetch`) from the type of animal that was eaten (`Animal`) and we are working with the dataset `bushtuckerLong`.
+
+- We also need to account for the fact that there are several data points per participant - the data contains dependencies. We need to include this dependency in the model.
+
+**Solution**
+
+- Using multilevel linear models by way of the `lme()` function makes it possible for us to account for the dependecies in our data.
+
+- That is because `lme()` allows us to include **random variability** in the analysis via the `random` argument - it helps us communicate to the function that we have a source of random variation in our data besides the variation stemming from the experimental manipulation - that is the specificities of each participant.
+
+Let's take a look at the skeleton of a `lme()` function that allows you to run a multilevel linear regression:
+
+`multilevelModel <- lme(outcome ~ predictor(s), random = random effects, data = dataframe, method = "ML")`
+
+So far, everything looks familiar, you specify the independent and dependent variables via a formula. Afterwards, the new element here is that you specify what the source could be for the dependencies in your data. Next, you specify the dataset/dataframe you are working with, and then you specify the last argument  `method = "ML"`. No need to worry about the latter one - it is simply a method used by the model that is optimal for repeated-measures analyses.
+
+We need to model the fact that people's overall sensitivity to retch will vary from one participant to another (some have more sensitive stomachs than others for example). You can specify this in the function by supplying the following value to the `random` argument: `random = ~1|Participant/Animal`. All this means is that if you look at the variable Participant within the variable Animal (that's what the 'Participant/Animal' bit means), then overall levels (that's represented by 1) of the outcome (time to retch) vary.
+
+
+**Optional Task 1**: Fit the multilevel linear model based on the instructions above. Save it in a variable called `bushModel_multilevel`.
+
+```{r}
+
+```
+
+**Optional Task 2**: Look at the output of the model. Supply the model you saved in the `bushModel_multilevel` variable to the `summary()` function 
+
+```{r}
+```
+
+For the present purposes, we will only look at **output pane 3**. The contrasts you have set before tell you everything you know about the differences you wanted to investigate, considering the planned contrasts we've already defined.
+
+From the output we find out:
+
+1. that the retching times were significantly different for whole animals compared to animal parts *b* = 1.38, *t*(21) = 3.15, *p* = .005.
+
+If you refer to the descriptive statistics (average retching times in seconds by animal - Task 4) you have computed before, you will notice that this is true. It took people longer to retch after eating a sick insect or a witchetty grub compared to when they ate a fish eye or a kangaroo testicle. Uncomment the line below
+
+```{r}
+#averagesByAnimal
+```
+
+
+2. According to the second contrast, there was no significant difference in the time to retch after eating a
+kangaroo testicle and a fish eye, *b* = -0.063, *t*(21) = -0.101, *p* = .920. 
+
+3. According to the third contrast, there was a non-significant difference in the retching times after having eaten stick insects vs. witchetty grubs *b* = -1.188, *t*(21) = -1.924, *p* = .068. However, take into consideration how close the p-value is to the significance level. This is a good reason to mention the differences that exist between these categories, even if they did not reach significance.
+
+**What if you wanted to find out if there was an overall effect of your experimental manipulation?**
+
+In order to find out whether our animal factor had an overall effect on retching times, we need to build a baseline level, where we exclude the predictor from the model formula. We will then compare it to the model where the animal predictor is present and see whether its' presence made a difference - which one of the two is a better fit to the data we have at hand.
+
+To create a baseline model, rather than include Animal as a predictor, we will include only the intercept (which we denote with '1'). What does it mean that we only include the intercept? In this case, our regression line in the multilevel model represents the overall mean of retching times, without accounting for different types of animals. We're using the mean as a model, which we know is sometimes a bad fit to the data (think about script 2, where we first talked about using the mean as a model for our data)
+
+**Optional Task 3**: Build a baseline model. To do that, simply replace the Animal predictor with 1. All other arguments will stay the same, since we're still dealing with repeated-measures data. Save it in a variable called `bushModel_multilevel_baseline`.
+
+```{r}
+
+```
+
+**Optional Task 4**: Use the `anova()` function to compare the two models. Simply supply both models as arguments to the function
+
+```{r}
+
+```
+
+**Understanding the output**
+
+We are presented with the result of comparing the baseline model and the model that includes the **Animal** factor as a predictor.
+
+- The baseline model has 4 degrees of freedom, while the model including the predictor has 7 degrees of freedom. Why is that? This is because the Animal factor has been coded with three contrasts (Parts vs. Whole animals, Fish eye vs. Kangaroo testicles, Stick insect vs. Witchetty grub), which means that each contrasts has been accounted for in the model.
+
+- The AIC and BIC tell us about the fit of the model (smaller values
+mean a better fit). The fact that these values are smaller in the model including Animal as a predictor is an indicator of the fact that this model is a better fit to the data compared to the baseline model
+
+- The likelihood ratio (L.Ratio ) tells us whether this improvement in fit by including Animal as a predictor is significant, 
+
+- The p-value tells us that the model including the predictor is significantly better than the baseline.
+
+**Conclusion**: Animal is a significant predictor of the time it takes participants to retch. We can conclude, then, that the type of animal consumed had a significant effect on the time taken to retch, $χ^2(7)$ = 12.69, P = .005
+
+## Post-hoc tests
+
+Let's say that you are still curious about the differeces between categories of animals and their effect on celebrities' retching reaction. Even though you've found out that there are differences between the groups you thought might differ (your planned contrasts), you want to find out what other differences might be between the animal groups. You can of course pursue this with post-hoc tests.
+
+You can use a variety of options, either Bonferroni-corrected pairwise t-tests, or post-hoc tests using the `emmeans()` function from the `emmeans` package or the `glht()` function using Tukey's HSD from the `multcomp` package. Be sure to install needed packages and to load them to the library
+
+**Optional Task 5**: Conduct a post-hoc test using any of the options mentioned above. Please consult the help menu for the function(s) you will chose to use, so you can use the right arguments. In case you find it confusing, take a look at the examples or google how to use the function. 
+
+```{r}
+
+```
+
+```{r}
+```
+
+```{r}
+```
+
+The time to retch was significantly longer after eating a stick insect compared to a kangaroo testicle (*p* = .004) and a fish eye (*p* = .003) but not compared to a witchetty grub. The time to retch after
+eating a kangaroo testide was not significantly different to after eating a fish eyeballl or witchetty grub (both *p*-values > .05). Finally, the time to retch was not significantly different after eating a fish eyeball compared to a witchetty grub (*p* > .05).
+
+# End of script
+
+I congratulate you for completing this script! You have dealt with complex issues this week and if things feel fuzzy, make sure to reach out. I encourarge you to ask questions and to also take a closer look at Andy Field's statistics coursebook, namely the 13th chapter. This week's topics have shown you how how you can approach an analysis in two different ways and how to overcome the challenges brought by each option. 
+
+Please make sure to upload the error-free and knittable script to Moodle. 
+

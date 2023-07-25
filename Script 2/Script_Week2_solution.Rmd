@@ -1,0 +1,781 @@
+---
+title: 'Script 2: Learning about statistical models and exploring assumptions'
+author: "Ana-Maria Plesca"
+date: "3/28/2023"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+#suppress the warnings and other messages from showing in the knitted file.
+knitr::opts_chunk$set(
+  fig.width  = 8, 
+  fig.height = 5, 
+  echo       = TRUE, 
+  warning    = FALSE, 
+  message    = FALSE,
+  cache      = TRUE
+)
+```
+
+# Learning objectives
+
+1. Learning how to use measures of [central tendency](#central_tendency) in R 
+2. Introducing [relational operators](#relational_operators).
+3. Discovering the [statisical models](#stat_models) and [assessing model fit](#model_fit)
+4. Identifying and dealing with [outliers](#outliers) using visualisation and [z-scores](#zscores)
+5. Filtering and summarizing data.
+6. Learning about the [assumptions underlying parametric tests](#assumptions) and how to test for these assumptions using R. 
+
+
+# Introduction
+
+Welcome to the second week's script! We have previously had our first contact with different data structures, building up to data sets. You have already acquired knowledge about one of the first analysis steps: data visualization. You have learned how to look at your data by plotting it, so that you can get a sense of its patterns, and what they might suggest about your data.
+
+This week, you will learn to look at your data it via measures of central tendency. We will introduce the notion of outliers and we'll learn how to identify them. In addition to that, we will briefly introduce the notion of a statistical model and we will be showing how a very simple model looks like. In order to put your data to statistical tests, you will also learn how to assess whether it meets certain assumptions that need to be fulfilled in oder to perform such tests. 
+
+## Script prep
+
+Loading the necessary packages from the library of installed packages. If this ever throws an error, then it means that some package might not have been installed on your machine.
+
+```{r script_prep1}
+#install.packages("epiDisplay") # for frequency tables; uncomment if not previously installed
+
+library(tidyverse)
+library(ggplot2)
+library(Rmisc)
+library(haven) # for loading .sav datasets (or other SPSS datasets)
+library(dplyr) # great for summary statistics, offers all necessary functions for measures of central tendency
+library(lubridate)
+library(epiDisplay)
+```
+
+Setting up the working directory 
+
+```{r script_prep2}
+# Please adjust the path accordingly. This means you should create a separate folder for this second course and script within your (hopefully) already existing R directory. Copy that path here!
+setwd("/Users/anamariaplesca/Desktop/Stats planning/Script 2")
+```
+
+Loading in our datasets
+
+```{r script_prep3}
+chickflick_outliers <- read_sav("ChickFlick_outliers.sav")
+chickflick_simplified <- read_sav("ChickFlick_simple.sav")
+```
+
+# Measures of central tendency
+
+Exploring measures of central tendency means that we are trying to understand and describe (in a very simple way!) the typical behavior under certain experimental conditions, as observed via our dependent variables (e.g., reading times, physiological arousal, amount of uttered words, etc.). An easy and basic way to do this is to look as measures of central tendency, such as **the mean**, **the median**, **the mode**.
+
+```{r central_tendency, echo=FALSE}
+# Reading in data you are already familiar with. This data is in comma separated value format. We'll use the read_csv() function
+data <- read_csv("Data with which to play.csv")
+```
+
+- **Exercise**: Check the structure of the data and familiarize yourself with the columns. What's the function we previously used for this purpose? If you're stuck, go back to the previous script. Even better: Google it - type something like *inspecting data in r* in the search bar.
+
+```{r}
+# To get an output with the structure of your data use the function str()
+str(data)
+
+# What the output tells you:
+# You have a [10 × 7] table: a table with 7 columns and 10 rows for each column
+# Each column name is introduced/indexed by a $
+# You are informed what type of data you have in each column: character, numerical, as well as how many values/rows you have [1:10] shows an interval of rows from 1 to 10
+# You also get an overview of values
+```
+
+```{r}
+# You can also look at the structure of your data with a new function that shows you the first rows of the dataframe - head()
+# Supply the n argument to decide how many of the first elements to show
+head(data, n = 3)
+
+# The output looks like a table and under each column name you get the data type in that respective column. 
+# You are shown a 6 x 7 tibble: 6 rows by 7 columns
+# A tibble is a modern and simpler version of a dataframe 
+
+# You can also take a look at the last elements of your data with tail()
+tail(data, n = 2)
+
+```
+
+## The mean
+
+The mean is the average value of the dependent, numerical variable we're measuring. Remember that it's a single value representing an entire dataset, which makes it very sensitive to extreme values (or outliers). Computing the mean in R is straightforward:
+
+Using the data we have just loaded in our environment, let's find out the average income in our dataset.
+
+```{r mean1}
+# Using the `$` operator to indicate that we need the column `Income` from our dataframe `data`. Once you type the dollar operator a list of suggestion will pop-up. Use this opportunity. If you click away press on the TAB key.
+
+mean_income <- mean(data$Income)
+
+# If you were to apply the function as follows...
+# mean(Income)
+# ... R would have thrown an error. That is because you have to indicate where the column comes from.
+```
+
+- **Exercise** Find out the average number of friends and the average neuroticism score using the `Neurotic` column. Save the results in separate variables with names of your chosing.
+
+```{r mean2}
+mean_friends <- mean(data$Friends)
+mean_friends
+
+mean_neuroticism <- mean(data$Neurotic)
+mean_neuroticism
+```
+
+## The median
+
+Much like the mean, the median represents the data with a single value. By contrast, it is less sensitive to atypical, extreme values. Here's how to compute this measure of the centre of a dataset:
+
+```{r}
+# Finding out the median income in our data
+median_income <- median(data$Income)
+```
+
+## Relational operators
+Let's compare the mean income and the median income. We can do that with the help of conditional operators. These will prove to be an useful tool for data exploration.
+
+- `<` : smaller than
+- `>` : larger than
+- `==` : equal to
+- `<=` : smaller or equal to 
+- `>=` : larger or equal to 
+
+Is the mean income smaller than the median?
+
+```{r}
+mean_income < median_income #FALSE - boolean value representing NO
+```
+
+Let's make this more complicated. Let's find out whether the average income is larger for older vs. younger people.
+We will build two groups based on the `DOB` column in our dataset
+
+Step 1: Let's explore the the DOB column and look at the range of years of birth
+
+```{r age_exercise}
+# Saving the years of birth in a variable
+years_of_birth <- data$DOB
+
+# Looking at the range of values. In R, the function `range()` delivers the minimum and the maximum observed values
+range(years_of_birth)
+```
+
+Step 2: Check whether the column contains values of numerical type. This is necessary because we want to compare values
+
+```{r age_exercise2}
+typeof(years_of_birth)  # yes, double values are of numerical type
+```
+
+Step 3: Create a group for older people: This group contains people born before and including 1970.
+
+Note: We will introduce the pipe operator `%>%`. This operator is used with the `tidyverse` package and allows us to pre-process data easily. 
+
+```{r age_exercise3}
+# Filtering 
+old <- data %>% # Take the `data` dataset AND
+  filter(years_of_birth <= 1970) # filter the dataset such that it includes only the people born before and including 1970
+
+# Take a look at the result
+old
+```
+
+- **Exercise**
+Step 4: Create a group for younger people. This group must contain all people born after 1970, but not including 1970
+
+```{r age_exercise4}
+young <- data %>% #
+  filter(years_of_birth > 1970)
+```
+
+- **Exercise**
+Step 5: Compute the mean and median incomes for the `young` and `old` groups. 
+
+```{r age_exercise5}
+# Computing the average income for the older group
+mean_income_old <- mean(old$Income)
+# Checking the value
+mean_income_old
+
+# Computing the average income for the older group
+mean_income_young <- mean(young$Income)
+# Checking the value
+mean_income_young
+
+# Computing the median income for the older group
+median_income_old <- median(old$Income)
+# Checking the value
+median_income_old
+
+# Computing the median income for the older group
+median_income_young <- median(young$Income)
+# Checking the value
+median_income_young
+```
+
+- **Exercise**
+Step 6: Is the mean income for the old group equal to the mean income for the young group?
+
+```{r age_exercise6}
+mean_income_old == mean_income_young # No
+```
+
+- **Exercise**
+Step 7: Is the median income for the old group smaller than the median income for the young group?
+
+```{r age_exercise7}
+median_income_old < median_income_young # No
+```
+
+
+## Mode
+
+The mode helps you identify the most observed value(s) in the data. Unlike the mean and the median, there can be multiple modes in the dataset. 
+
+<p class="alert alert-warning">The mode and histograms have something in common. They enable you to see the most frequently observed values. If there is one peak in the histogram, then you have a unimodal distribution (there is only one mode, only one most frequently observed value). If there are more peaks, then you have a multimodal distribution. Computing the mode is a good way to confirm your intuitions about a dataset that you've built during the data vizualisation step.</p>
+
+There is no easy way to find the mode in R, but you can use self-programmed functions to do that. Here's an example
+
+```{r mode_function}
+# Don't worry, you are not expected to understand all of this now. Just keep in mind that it is a function 
+# that computes the mode for you
+
+find_mode <- function(x) {
+  u <- unique(x) # finds unique instances of each Income value
+  tab <- tabulate(match(x, u)) # computes frequencies for each unique value in the actual column
+  u[tab == max(tab)] # indexing the vector with unique instances of each Income value depending on their frequency
+}
+```
+
+Let's find the mode for the Income column in our dataset:
+
+```{r mode2}
+mode_income <- find_mode(data$Income)
+mode_income # we have two modes, i.e., two most frequent values
+```
+
+Compare this with a simple histogram:
+
+```{r modes_histograms}
+
+hist(data$Income) # two peaks 
+```
+
+<style> div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+**The relationship between the mean, the median, and the mode:**
+
+- In a **perfectly symmetrical** distribution, the mean and the median are the same. If the symmetrical distribution is unimodal (has only one mode), then the mode is the same as the median and the mean. If the distribution is bimodal (has two modes), then the modes would differ both from the mean and the median.
+
+- If the distribution of data is **skewed to the left**, the mean is less than the median, and the median is less than the mode.
+
+- If the distribution of data is **skewed to the right**, the mode is often less than the median, which is less than the mean.</div>
+
+## The mean as a basic statistical model
+
+Let's say we would like to find a way to summarize the observations in the `Chickflick` data, in order to be able to speak about a general tendency of our data. To do this, we could build a statistical model based on which we can also make predictions about our model. For instance, given all we know about the `Chickflick` data, we can predict that a male participant that watches Memento will be more physically aroused than a female watcher. 
+
+One very basic model could be the mean. For the purpose of the following example, we will be using the mean as a very basic model for all data, regardless of gender and film. In what follows you will see a visualization of that by way of a scatterplot. The mean as a model will be represented by a horizontal red line.
+
+**Scatterplot** = in a scatterplot each value is represented as a dot and shows the relationship between two **numerical** variables. Other than histograms or barplots, you cannot plot a numerical variable as a function of a categorical variable.
+
+Let's see what happens when we try to fit the mean as a model to the `Chickflick` data containing outliers.
+
+
+**Plotting the physiological arousal scores as a function of their index in the dataset**
+
+```{r mean_model}
+# Run both lines of code together to create a scatterplot and to add a line representing the mean as a model
+
+plot(chickflick_outliers$arousal)
+abline(h = mean(chickflick_outliers$arousal), col="red") 
+```
+
+Right off the bat we can see that the line is pretty far away from most observations. This indicates that the model is not representative of the data (we know that if a model is good, then the data points are very close or overlap with the line). Why is that?
+
+1) **There are a few outliers in our dataset.** In the upper region of the y-axis there are values between 100-120 which are drastically different from those in the lower region of the y-axis which vary between 0-40.
+
+2) **The mean is very sensitive to outliers** The red line representing the mean is pulled up by the very few extreme values.
+
+Let's dive into an exploration of outliers and replicate the SPSS expercises in R.
+
+# Outliers
+
+## Detecting outliers with plots
+
+Let's plot the data using a boxplot.
+
+All categorical variables need to be converted to factors before attempting to plot the data. Skipping this step leads to odd-looking plots. We are using the pipe operator `%>%` and the mutate() function to modify the gender column in our data.
+
+<p class="alert alert-info"> I encourage you to use a shortcut for the pipe operator`%>%`:
+- For Windows: `Ctrl/Strg` + `Shift` + `M`
+- For MacOs: `Cmd` + `Shift` + `M`</p>
+
+```{r factors}
+# This is what we are instructing R to do:
+# 1. Take the dataset chickflick_outliers
+# 2. To it, mutate/add:
+#   2a. a column named gender, where the already existing column gender is transformed from the character to the factor type
+#   2b. a column named film, where the already existing column film is transformed from the character to the factor type
+
+chickflick_outliers <- chickflick_outliers %>% 
+  mutate(gender = as.factor(gender),
+         film = as.factor(film))
+```
+
+
+```{r outliers_boxplot}
+ggplot(data = chickflick_outliers, aes(x = film, y = arousal, fill = gender))+
+  geom_boxplot() +
+  stat_boxplot(geom = "errorbar")+
+  labs(x = "Film", y = "Average physiological arousal", fill = "Gender",
+       title = "Average physhiological arousal as a function of gender and watched film")+ 
+  scale_fill_brewer(palette = "Pastel1")
+```
+
+Notice the black dots in the upper region of the plot. They represent extreme values, and as you can see, they also impact the appearance of our boxplots. Notice the width of the box associated with Gender 1 and Film 2. The width of the box is dragged upwards due to the presence of the outliers.
+
+**How do we discover which values are the outliers?**
+
+Other than in SPSS, displaying the row number of the outliers in plots is not as straightforward. It possible to extract the values of the outliers based on the interquartile (IQR) criterion thanks to the` boxplot.stats()` function. Use the `$out` argument directly on the `boxplot.stats()` function call to access the values of the outliers. 
+
+```{r outlier_detection1}
+outliers <- boxplot.stats(chickflick_outliers$arousal)$out
+
+outliers
+```
+
+Use the `which()` function to extract the row number corresponding to the values of the outliers:
+
+```{r outlier_detection2}
+outliers_index <- which((chickflick_outliers$arousal %in% outliers))
+
+# What which() does:
+# Which compares the values in the entire arousal column with the values stored in our `outliers` vector.
+# It then delivers the indices for which the comparison yields a TRUE answer.
+
+outliers_index
+```
+
+## Detecting outliers using z-scores
+
+Let's create a new column in our dataset containing z-values based on the arousal scores. We'll use the formula for z-scores:
+ 
+ *z =  (X – μ) / σ*
+ 
+ - **X** is an observation (e.g., an arousal score)
+ - **μ** is the mean
+ - **σ** is the standard deviation
+ 
+```{r z_scores1}
+# Saving the mean and the standard deviation in variables
+mean_chickflick <- mean(chickflick_outliers$arousal)
+sd_chickflick <-  sd(chickflick_outliers$arousal)
+```
+
+**Adding a column containing z-scores to our data**
+
+We'll use the pipe operator `%>%` you have seen before, along with the function `mutate()` to add the extra column containing the z-values. The first argument of the function is the name of the new column, the second argument is will define the values within that new column based on the formula for z-scores.
+
+**Why are we using z-scores for outlier detection?**
+
+Z-scores help you understand how far away a data score is from the mean. In other words, a z-score tells you how many standard deviations away your point is from the mean.
+
+```{r z_scores2}
+chickflick_outliers <- chickflick_outliers %>% 
+  mutate(z_scores = ((chickflick_outliers$arousal - mean_chickflick)/sd_chickflick))
+# new values are computed for each value in the arousal column
+```
+
+Take a look at the result:
+
+```{r z_scores3}
+chickflick_outliers
+```
+
+- **Exercise** Remember that adding an extra column is also possible with the `$` operator. Add the very same column using this method
+
+```{r z_scores4}
+chickflick_outliers$z_scores <- (chickflick_outliers$arousal - mean_chickflick)/sd_chickflick
+
+# Check the result
+chickflick_outliers
+```
+
+**Recoding the z-scores according to z-score thresholds**
+
+- values higher than **3,29** recoded to **4** 
+- values higher than **2.58** recoded to **3** 
+- values higher than **1,96** recoded to **2** 
+- values lower than **2** recoded to **1** 
+
+**Reminder**: Z-scores and the standard normal distribution are concepts that go hand-in-hand. You can use z-scores to  find out where in the standard normal distribution a value is located. The higher the value of the z-score, the further away it is from the mean. 
+
+Z-scores also indicate the area they cover under the bell curve of the normal distribution:
+- the area between  **+1,96** and **-1,96** covers **95**% of the data
+- the area between  **+2,58** and **-2,58** covers **99**% of the data
+- the area between  **+3,29** and **-3,29** covers **99,9**% of the data
+
+In this sense, if you encounter a z-score higher than 3, this shows that this value is highly unusual compared to most of the data (that piles up around the mean).
+
+```{r z_scores5}
+# Let's recode the z-scores 
+chickflick_outliers <- chickflick_outliers %>% 
+  mutate(z_scores = case_when(
+    z_scores > 3.29 ~ 4,
+    z_scores > 2.58 ~ 3,
+    z_scores > 1.96 ~ 2,
+    z_scores < 2 ~ 1
+  ))
+
+# Check the result
+chickflick_outliers
+```
+
+Let's look at which values of z-scores were higher than 2.
+
+```{r z_scores6}
+# Using the pipe operator and the filter() function to find the extreme values
+extreme_values <- chickflick_outliers %>% 
+  filter(z_scores > 2)
+
+# Check the results
+extreme_values 
+```
+
+## Frequency tables
+
+Let's look at the frequency of the z-score values using frequency tables. 
+
+**Option 1**: A quick way to compute frequencies of values is to use the function `table()`. The output shows you the values in the first row, and their frequency in the second row
+
+```{r freq_tbls1}
+table(chickflick_outliers$z_scores)
+```
+
+**Option 2**: Use the `tab1()` function from the `epiDisplay` package. The output will provide: frequency, percentage and cumulative percentage of the values, as well as a frequency plot of the re-coded z-scores.
+
+```{r freq_tbls2}
+tab1(chickflick_outliers$z_scores)
+```
+## Getting rid of outliers
+
+Before you remove any outliers in your data, you must have a good motivation to do so. If you have collected behavioral data such as reaction times, browse through the literature and find out what thresholds researchers use for the population you are looking at (e.g., what could be the lowest acceptable reading time per word for native speakers - let's say 200 ms. Values shorter than that could be considered to be outliers).
+
+If you have a good reason to remove outliers, here is how you could do it. We will be using the pipe operator `%>%` and the `filter()` function we've encountered before. To exclude the extreme scores all we have to do is use an additional `!`. You are instructing the function to filter out all data points that fulfill the condition you typed as an argument to the `filter` function
+
+```{r remove_outliers}
+# Let's exclude all z-scores equal to or larger than 3.
+chickflick_no_outliers <- chickflick_outliers %>% 
+  filter(!z_scores >= 3)
+
+# Check the result
+chickflick_no_outliers
+```
+
+# Assumptions underlying parametric tests
+
+Once you've decided what to do with the outliers that might exist in your data, the analysis steps can continue. Perhaps you would like to take a more precise look at the differences between certain groups. Let's take the `Chickflick` data for example: in the previous lesson you have used plots to visualise the data and you've seen that there are different patterns depending on the gender of the participants, as well as the film they have watched.
+
+If you want to investigate these differences you can conduct a statistical test. An example of a statistical, parametric test that has been mentioned in the theory part of the course if the **t-test**.
+
+**What's a parametric test?**
+
+It's a test that makes assumptions about the characteristics (parameters) of the population from which your sample is drawn.
+
+## The t-test
+
+In the interest of keeping it simple, for now all you need to know is that the t-test is a statistical test that you can use to compare the means of two groups of data. You can determine whether there is a *significant* difference between the means of your gropus of data. The groups can either be *dependenent* or *independent*.
+
+- **Dependent t-tests**: used to compare values stemming from the same population. You measure the stress levels of a person before and after the stats course. Alternatively you can measure satisfaction levels from the same person, but for two different products. The data is connected and represents a depenendet sample, because you test the same person at different data points and in different conditions. **You are asking: Is there a difference _within_ a group between _two points in time_ ?**
+
+- **Independent t-tests**: used to compare values from two different groups - the samples are unpaired, that is they come from different individuals. For instance, if you survey a group of male and female participants about their income or happiness levels, you get two independent samples. **You are asking: Is there a difference _between_ two _independent_ groups?**
+
+<p class="alert alert-warning">
+At this step we are not going to run any statistical tests, but we will discuss the requirements that need to be fulfilled in order to run the test. This allows you to gain a better understanding of your data and not run tests blindly, without knowing what they do or what type of data they are meant for.</p>
+
+### The steps you need to follow to run a statistical test
+
+- **1. Define your null hypothesis and your alternative hypothesis**
+
+  - **Null hypothesis**: You assume there is no difference between your groups. The means of your groups are equal
+
+  - **Alternative hypothesis**: You assume there is a difference between your groups. The means of your groups are different.
+
+
+- **2. Decide on the significance level/alpha level**.
+How much risk are you willing to take? If you decide on an alpha level α=0.05, you accept that there's a risk of 5 for you to conclude that the means you compare are different when in fact they are not. Along these lines, you are working with a confidence interval of 95%. You must do this before you perform your test!
+
+- **3. Check data for outliers**.
+We've already dealt with this step
+
+- **4. Check the assumptions for the test**.
+You must check whether the data fulfills the requirements, also called assumptions, of the t-test. 
+
+*For independent samples*:
+  - **Your dependent variable is continuous (interval/ratio) and your independent variables are categorical**
+  - **The errors/deviation scores around the mean are independent within a group and between groups**
+  - **Normality assumption**
+  - **Homogeneity of variance** (also called heteroskedasticity)
+
+*For dependent samples*:
+  - **Your dependent variable is continuous (interval/ratio) and your independent variables are categorical**
+  - **Normality assumption**
+  - **Sphericity** (the corresponding assumption to that of independence of errors for unpaired samples)
+
+- **5. Perform the test**
+
+## Checking the assumptions
+
+We will be working with the `Chickflick` data, more exactly with its simplified version. In what follows we will test whether the data meets the assumptions for an **independent t-test**, since we want to compare the female and male gender groups.
+
+```{r load_dat}
+chickflick_simplified
+```
+
+### Variables
+
+- The independent variables `gender` and `film` are indeed categorical
+- The dependent variable `arousal` is continuous.
+
+`Assumption fulfilled ✅`
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+You can add emojis to your script, here's how:
+
+- Windows 10 only:  `windows key` + `.` to bring up an emoji selector.
+- MacOs:  `cmd` + `control` + `space`
+
+</div>
+
+
+### Independence of errors
+
+In the case of our dataset we can be fairly sure that the errors arouns the means of interest (for each gender) are independent within a group and between groups. Each group saw the movies separately and within each group the participants saw the movies separately. 
+
+However, if you ever want to test for this assumption you can use the **Durbin-Watson test** using the `durbinWatsonTest()` function from the `car` package. For now, it's good to know this option exists, and you can read more about the test here: https://www.statology.org/durbin-watson-test-r/.
+
+`Assumption fulfilled ✅`
+
+### Normality assumption
+
+We will explore this by running some descriptive statistics. This means that we are summarizing the dataset and since we're interested in the female and male groups, we'll compute summary/descriptive statistics for both of them
+
+**Creating a female subset**
+
+Step 1: We are grouping data by gender, thus disregarding the film variable
+Step 2: We are creating a subset containing female participants only
+Result: We will obtain 10 values - the initial 20 scores will be lumped together in 10 scores, since we're disregarding the film
+
+```{r subset1}
+female_chickflick_subset <- chickflick_simplified %>% 
+  group_by(gender) %>% 
+  filter(gender == 2)
+```
+
+**Creating a male subset**
+
+- **Exercise**: It's your turn to do some work. Create a male subset using the template above.
+
+```{r subset2}
+male_chickflick_subset <- chickflick_simplified %>% 
+  group_by(gender) %>% 
+  filter(gender == 1)
+```
+
+#### Computing descriptive statistics
+
+##### Female group
+
+We will compute summary statistics using the `describe()` function from the `psych` package. We indicate this as such `psych::describe().` This is because we only need this one function from the `psych` package. Since the package is installed and because do not want to overload our environment with a whole library, we can call a function from a specific package as such: 
+
+```{r summary1}
+female_chickflick_summary <- psych::describe(female_chickflick_subset$arousal)
+
+female_chickflick_summary
+```
+
+Remember to inspect the skew and kurtosis values. If we are dealing with a normal distribution, both skew and kurtosis should be 0. Other patterns are of course possible:
+
+- Positive skewness: values pile up to the left of the distribution
+- Negative skewness: values pile up to the right of the distribution
+- Positive kurtosis: values are squished together, leading to a pointy distribution with long tails
+- Negative kurtosis: valies are dispersed leading to a flat-looking distributions with tiny tails
+
+
+##### Male group
+
+- **Exercise**: Compute the summary statistics for the male group following the procedure above. 
+
+```{r summary2}
+male_chickflick_summary <- psych::describe(male_chickflick_subset$arousal)
+
+male_chickflick_summary
+```
+
+#### Plotting the data for each group
+
+##### Female group
+
+**Plotting a histogram of the arousal scores for the female subset**
+
+```{r hist_normality_plot_F}
+hist(female_chickflick_subset$arousal)
+```
+
+**Plotting a QQ-plot of the arousal scores for the female subset**
+
+```{r qq_normality_plot_F}
+# Select and run both lines together
+qqnorm(female_chickflick_subset$arousal)
+qqline(female_chickflick_subset$arousal)
+```
+
+It seems that the data is pretty close to normality. Remember that the closer the data is to the line, the closer the distribution of the data is to normality
+
+##### Male group
+
+- **Exercise: Plot a histogram of the arousal scores for the male subset**
+
+```{r hist_normality_plot_M}
+hist(male_chickflick_subset$arousal)
+```
+
+- **Exercise: Plot a QQ-plot of the arousal scores for the male subset**
+
+```{r qq_normality_plot_M}
+# Select and run both lines together
+qqnorm(male_chickflick_subset$arousal)
+qqline(male_chickflick_subset$arousal)
+```
+
+
+#### Running tests to check for the normality assumption: Kolmogorov-Smirnov and Shapiro Wilks tests
+
+##### Female group
+
+**Running a Shapiro-Wilks test** 
+
+This test is best fitted in this situation, since it is appropriate for smaller datasets (n. participants < 30).
+
+- Null hypothesis: the distribution of our data is not significantly different from the normal distribution.
+- Alternative hypothesis: the distribution of our data is significantly different from the normal distribution.
+
+```{r shapiro_wilks_female}
+shapiro.test(female_chickflick_subset$arousal)
+```
+The output of the test informs us that:
+
+- the p-value is 0.55, which means that it does not indicate a significant result. Since the result is not significant, we fail to reject the null hypothesis.
+
+- this suggests that the distribution of the data is not significantly different from normal distribution.
+
+`Assumption fulfilled ✅`
+
+**Running a Lilliefors-corrected Kolmogorov–Smirnov test**
+
+Please see the second class handout for an explination of the Lilliefors-corrected Kolmogorov–Smirnov test.
+To implement it, we will use the function `lillie.test()` from the `nortest` package and we'll call the function as such: `nortest::lillie.test()`
+
+- Null hypothesis: the distribution of our data is not significantly different from the normal distribution.
+- Alternative hypothesis: the distribution of our data is significantly different from the normal distribution.
+
+```{r lcks_female}
+nortest::lillie.test(female_chickflick_subset$arousal)
+```
+
+The output of the test informs us that:
+
+- the p-value is 0.62, which means that it does not indicate a significant result. Since the result is not significant, we fail to reject the null hypothesis.
+
+- this suggests that the distribution of the data is not significantly different from normal distribution.
+
+`Assumption fulfilled ✅`
+
+##### Male group
+
+- **Exercise: Run a Shapiro-Wilks test on the male subset** 
+
+```{r shapiro_wilks_male}
+shapiro.test(male_chickflick_subset$arousal)
+# the p-value is 0.69, which means that it does not indicate a significant result. Since the result is not significant, we fail to reject the null hypothesis.
+#this suggests that the distribution of the data is not significantly different from normal distribution.
+```
+
+- **Exercise: Run a Lilliefors-corrected Kolmogorov–Smirnov test on the male subset**
+
+```{r lcks_male}
+nortest::lillie.test(male_chickflick_subset$arousal)
+
+#the p-value is 0.78, which means that it does not indicate a significant result. Since the result is not significant, we fail to reject the null hypothesis.
+#this suggests that the distribution of the data is not significantly different from normal distribution.
+```
+
+### Homogeneity of variance assumption
+
+We will run Levene's test to test for the homogeneity of variance assumption. It evaluates if variances in different groups are the same.
+ 
+ - **Null hypothesis**: The variances are the same across groups. 
+ - **Alternative hypothesis**: The variances are different across groups.
+
+The Null Hypothesis can be rejected if the p-value is significant. If we choose an alpha level of 5%, then we can reject it if the p-value is smaller than 0.05. If the p-value is larger than 0.05, then the Null Hypothesis cannot be rejected
+
+**Running Levene's test**
+
+- **Null Hypothesis:** the groups we're comparing have equal population variances.
+- **Alternative Hypothesis:** the groups we're comparing do not have equal population variances.
+
+We will be using the leveneTest() function from the `car` package. Prior to that, we need to recode the gender column to a character factor.
+
+```{r levene_prep}
+chickflick_simplified$gender <- as.factor(chickflick_simplified$gender)
+
+chickflick_simplified <- chickflick_simplified %>% 
+  mutate(gender = recode(gender,
+                         "1" = "Male",
+                         "2" = "Female"))
+```
+
+```{r levene}
+car::leveneTest(arousal ~ gender, data = chickflick_simplified)
+```
+Our p-value of 0.9535 which is larger than our 0.05 alpha level. This suggests that we can't reject the null hypothesis that the variance is equal across our gender groups. The variance is homogenous across groups.
+
+`Assumption fulfilled ✅`
+
+### What if the assumptions were not met by the data?
+
+In that case, as also mentioned in the class handout you have a couple of possibilities:
+
+1) **You can transform the data.**
+
+If you opt for transforming your dependent variable, then you must also back up this decision with a good argument. At this point, it is not expected of you to know when to transform your data, but if you are curious, check out this resource: https://acarril.github.io/posts/data-transform-logs.
+
+An example where data transformation is useful is on reaction times. Reaction times are almost always skewed and a logarithmic transformation makes it less skewed, thus bringing it closer to the normal distribution. Here's how you can transform the arousal scores using the natural logarithm:
+
+```{r log_arousal}
+# Add a logArousal column by appling the natural logarithm function on the arousal column
+chickflick_simplified <- chickflick_simplified %>% 
+  mutate(logArousal = log(arousal))
+
+# Check the result
+chickflick_simplified
+```
+
+2) You can use robust methods (that is, tests that can handle data that does not meet the requirements of parametric tests - e.g., not normally distributed data, non-homogenous variance across groups,etc.  This is why robust tests are called non-parametric tests)
+
+Such robust tests for unpaired (independent) samples could be:
+
+- **Wilcoxon rank sum test**. Use the `wilcox.test()` function from the `stats` package
+
+- **Kruskal-Wallis test**. Use the `kruskal.test()` function from the `stats` package
+
+Remember that you can type `?wilcox.test()` or `??wilcox.test()` to find out how to use the function at the moment you will need it. If that does not help, google it. There are plenty of websites with tutorials for these tests. 

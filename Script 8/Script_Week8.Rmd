@@ -1,0 +1,246 @@
+---
+title: "Script_Week 8: Practice session II"
+author: "Ana-Maria Plesca"
+date: "2023-05-12"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, echo=F, message=FALSE, warning=FALSE}
+# Loading the necessary packages 
+# You will need to update this list as you work through the script.
+library(tidyverse)
+```
+
+This is the second practice session in R. Please work individually or in groups and make sure to hand out the script by 22.06.2023, 23:59. If you decide to work in groups to complete this practice session, please hand in your own, error-free knittable script. Good luck! 
+
+# Task I : Lexical-decision experiment data
+
+You will work with a dataset stemming from a lexical-decision experiment. Within this experiment, participants were asked to respond as fast as possible by pressing a `YES` button whenever a real word in German was presented (e.g., das Haus). Whenever the word that was presented was not a real word inGerman (e.g., das Hous), participants were asked to press as fast as possible a `NO` button.
+
+Additional information about the words that were presented in this study can be found in the dataset. For instance, the word length category (“length” variable), or the specific length of a particular word (“word_length” variable). You can also look up the “type” of trial, the frequency level (“freq” variable), the given “response”, the “item” number and the “trial” number.
+
+## Task I.1.
+
+Load in the data `Lexical_Decision_RTs.sav ` and save it in a variable called `lexical_decision_dat`. Considering that this is a `.sav` file, think about which function is needed. If you need a specific package to load this data, make sure to add the package to the `packages` code chunk above.
+
+
+## Task I.2.
+
+In this second step, you should get an understanding of the data that you are working with.
+Look at the structure of the data, look at what columns you have and what type of data is stored there.
+
+When working with SPSS datafiles such as, .sav files, the structure of the data looks quite differently than it is the case for .csv, or .dat files, or even data frames that can be created with R. However, upo a closer inspection, you should see that there are some labels attributed to some columns: `type`, `freq`, `length`, `response`
+
+## Task I.3.
+
+As you might have already noticed, the columns `type`, `freq`, `length`, `response` contain categorical values, which are now stored as numbers, but thanks to the labels, we know how to make them more informative.
+
+Your next task is to recode the values of each of the categorical variables above. Here is what the values mean for each column. The existing values are on the left side. Please recode the values on the left side with those on the right side. Use the information below to complete the recoding task:
+
+* `type` - column informing about the type of word participants saw
+
+  + 1 = Real word (critical trial)
+  + 2 = Pseudo word (filler trial)
+  
+* `freq` - word frequency
+
+  + 1 = low frequency
+  + 2 = medium frequency
+  + 3 = high frequency
+  + NA = pseudo-words have no word frequency
+
+* `length` - length of the word
+
+  + 1 = short frequency
+  + 2 = medium frequency
+  + 3 = long frequency
+
+* `response` - participant response. Was the word they saw a word or not?
+
+  + 1 = YES  
+  + 2 = N0
+
+Note that there are several ways to do this, feel free to use any option you want.
+
+Hint: recode is a key-word here - there's also a function called `recode()`. 
+
+
+## Task I.4. - Data exploration
+
+- **Find out how many participants took part in the experiment**
+
+Do not just type in the answer. Type in the code you used to find out
+
+Hint: Use the functions `length()` and `unique()` nested. That means, you can use a function within a function.
+
+
+- **Find out how many experimental trials were critical and how many were fillers.**
+
+Critical items are those where participants saw real words, whereas within filler trials, participants saw pseudo-words. Do not type just numbers, type the code that helps you find that. You need to find out the number of critical real words trials and filler trials that each participant has seen
+
+Hint: The `nrow()` function helps you determine the number of rows. If you apply it to a subset of the experimental trials with real words, then you would get the number of trials for all participants. You need to determine the number of trials of each type that each participant has seen.
+
+
+- **Generate frequency tables and plots for each categorical variable: type, frequency, length, response**
+
+Hint: Do you remember the script on outliers? We used a function from a specific package that allowed us to generate both frequency tables and plots for variables. Make sure to add that package to the libraries list at the beginning of the script once you determine which function to choose and from which package it comes. Alternatively you can use the `::` notation to specify from which package a function comes from.
+
+The frequency tables make it easy for us to see what kind of categories we have in our data and how often they occur. They inform you about the design of the experiment and help you see the first patterns in your data.
+
+## Task I.5. - Computing accuracy of responses
+
+In this task we will compute participants' response accuracy. In short, their answer needs to match the type of the experiment trial. If they saw a real word, they were supposed to (expected to) press on YES, if they saw a pseudo-word they were supposed to press on NO
+
+- **Create a new column called accuracy and add participant accuracy scores**
+
+Use the code 1 for a correct response and the value 0 for an incorrect response.
+
+Hint 1: Use the `ifelse()` function to help you create the content of the new `accuracy` columm. You need to check for two conditions to be true and depending on this, to set accuracy values of 1 - correct and 0 - incorrect.
+
+Hint 2: Feeling extremely stuck? That's okay! After you've tried several things and feel that you have exhausted all options, check the answer here to be able to move forward with the script: https://box.hu-berlin.de/f/381bf1ff4e10412d8d69/
+
+
+- **Create a new column called accuracy_percentage based on the accuracy scores**
+
+To do this, you should group data by participants and create an accuracy_percentage column where you should sum up all of the points per participant, divide it by the number of the items and then multiply the result by 100 to obtain the result.
+
+Here comes the tricky part: When you decide to which number you should divide the sum of accuracy scores, think about the fact that you are essentially asking yourself how many times the participants were right in their decicision.
+
+Hint: If this task is a bit too much that's of course okay. Give it your best shot though!
+If you have spent too much time on it and you have not found any solution and just want to move on, here's the solution for that: https://box.hu-berlin.de/f/c008443224e14ef49e9f/
+
+
+- **Determine the highest and the lowest accuracy percentages**
+
+Hint: there is a function that gives you both values in one go.
+
+
+- **Determine the average accuracy percentage**
+
+
+## Task I.6. Exploring your data visually
+
+We haven't yet learned anything about the `word_length` and `RT` columns - we'll do just that in the next few steps using plots.
+
+- **Plot the distribution of the values within the `word_length` column with a histogram and describe the plot - is the data normally distributed?**
+
+
+
+- **Plot the distribution of the values within the `RT` column with a histogram and describe the plot - is the data normally distributed?**
+
+
+
+- **Using a boxplot, compare the distribution of the RTs for different word frequencies (“freq”
+variable).**
+
+We are now curious to see whether the word length led impacted reading times. As well as that, we are interesed in finding out whether there are outliers in our data. Boxplots are the perfect tool for that (that is, exploring the distribution of a measure variable (rt) as a function of a categorical variable (word length), as well as for detecting outliers)
+
+You should only be working with the real word data, so you should build a subset first.
+
+Hint: To achieve this result, the word frequency should be plotted on the x-axis and the reaction times on the y-axis
+
+
+- **Describe what you understand from the boxplot**
+
+The boxplot showing the reaction times plotted as a function of word frequency category informs us with respect to the following patterns:
+
+- the higher the frequency of the word, the less outliers we have. In other words, participants are quicker to respond.
+
+- The less frequent a word is, the more time participants need to respond to the lexical-decision task. In other words, for infrequent words, there were longer reaction times for the decision as to whether the encountered word was a word or not.
+
+- Participants performed much better for high vs. medium frequency words and for medium vs. low frequency words.
+
+
+# Task II: Festival goers and their hygiene scores
+
+Use the data file (“DownloadFestival.dat”). We can use it to explore assumptions
+about our data. The data contains the hygiene scores from three days at the Download Music Festival (the scores from the three days are labeled ‘day1’, ‘day2’, and ‘day3’ respectively). We also recorded participants’s gender and their ticket number.
+
+We plan to analyze the data for day1 using a **parametric t-test**. First,
+verify assumptions that your data should meet before conducting the test,
+and screen the data for outliers.
+
+## Task II. 1.:  **Read in the data**
+
+Consider the fact that this is a `.dat` file. Which function should you use? Save dataset in a variable called `downloadDat`
+
+
+## Task II.3.: Take a look at the data and get a sense of its structure.
+
+
+## Task II.3.: Build a subset with the data for day 1 only, including the information about ticket number and gender. Save the result in a variable called `downloadDat_day1`.
+
+Hint: Use the `select()` function from the `dplyr` package. You can even select out columns, that would be the quickest way. You can also use any other solution that works for you
+
+
+## Task II.4.: Build subsets for female and male festival goers
+
+This is necessary, because in later steps we will screen each group for outliers and we will test our assumptions for the parametric test. The male gender is coded with 0, the female gender is coded with 1
+
+- **Generate data subsets for each gender**
+
+
+## Task II.5.: Screen the female data for outliers
+
+- **Compute z-scores and recode them to rounded values for convenience just like you did in Week2. If you find any scores *larger than 2*, then you should replace these with the average hygiene score. If you find any, replace the hygiene score with the mean hygiene score for the group in which the outlier occurred.**
+
+
+- **Replace outliers with the average hygiene scores for day1 for the female group**
+
+Don't worry, you don't need to complete this task all alone. This is a way to replace values in a column depending on values in another column. 
+
+The code below uses variable names that might differ from yours, so make sure to use the variable name for your female subset and for the variable where you saved the mean hygiene score.
+
+**What does the code below do?**
+
+- It takes the dataset and looks into the `day1` column
+
+- Next, based on the content within the square brackets `[]`, R looks for the row that satisfies the condition within the square brackets
+
+- Next, R replaces the content of that column and row number in the dataset with a new value determined by us.
+
+The commented code below shows you an example of how to complete this task. Note: In case you've used different variable names R will throw some errors at the line of code above. Make sure to adjust the variable names to those you used.
+
+```{r}
+#downloadDat_day1_female$day1[downloadDat_day1_female$z_scores > 2] <- mean_female_day1_download
+```
+
+
+## Task II.6.: Screen the male data for outliers
+
+- **Compute z-scores and recode them to rounded values for convenience just like you did in Week2. If you find any scores *larger than 2*, then you should replace these with the average hygiene score. If you find any, replace the hygiene score with the mean hygiene score for the group in which the outlier occurred.**
+
+
+- **Replace outliers with the average hygiene scores for day1 for the male group**
+
+To complete this task, you can use the example you were provided with for the female dataset.
+
+
+## Task II.7.: What kind of parametric t-test should you be running?
+
+You should run an unpaired t-test, since we are comparing independent groups split by gender
+
+## Task II.8.: Check whether the data fulfills the assumptions
+
+- **Check for the normality assumption - female dataset**
+
+
+- **Check for the normality assumption - male dataset**
+
+
+- **Check for the homogeneity of variance assumption**
+
+Note that you need to merge the female and male subsets into a new dataset. Remember that you have computed z-scores and also removed values, and this is why an updated dataset is needed. As well as that, you need to make sure that gender is coded as a factor.
+
+
+## Task II.9.: Conduct the t-test, report and interpret the results
+
+
+# End of script
+

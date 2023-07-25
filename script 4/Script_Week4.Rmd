@@ -1,0 +1,410 @@
+---
+title: "Script 4: Correlations: Part 1 "
+author: "Ana-Maria Plesca"
+date: "2023-04-11"
+output:
+  html_document:
+    toc: true
+---
+
+
+# Introduction
+
+Welcome to the fourth week of statistics with R. This script will take you on a journey that's all about correlation. Our goal for this week is to learn how to conduct correlation analyses in R and to understand what they mean. I strongly recommend you to read Chapter 6 in Andy Field's book Discovering Statistics with R. 
+
+# Learning objectives
+
+1. Understanding the difference between covariance and correlation.
+1. Understanding the relationship between two variables by way of their correlation.
+2. Using scatterplots to gain a first understanding of the relationship between two variables.
+3. Conducting the first correlation test and checking its assumptions.
+4. Exploring different R functions for correlation tests.
+
+# Script prep
+
+Loading packages
+
+```{r message=FALSE, warning=FALSE}
+library(Hmisc)
+library(ggplot2)
+library(polycor)
+```
+
+Setting up the working directory
+
+```{r}
+setwd("~/Desktop/Stats planning/script 4")
+```
+
+# Covariance vs. correlation
+
+## Covariance
+
+If you are interested in finding out whether two variables are associated, you can look at the way they vary together (or how they *covary*). Let's take *number of meals per day* and *self-perceived hunger score* as variables that we want to look at. In covariance terms, if we expect that there is a connection between the two, we expect both variables to vary similarly (or in opposite way) around their own means.
+
+To explore how two variables might be related with R, we can take a look at **covariance** using **covariance matrices**.
+
+**Creating an example dataframe**
+
+```{r covariance1}
+# Let's create a dataframe that informs about hunger scores and number of meals per day. The smaller the score, the least hungrier a participant is.
+
+hunger_data <- data.frame(hungerScore = c(1, 2, 8, 3, 7, 9, 9, 7, 8, 9),
+                   noOfMeals = c(2, 3, 4, 2, 2, 5, 4, 3, 4, 6))
+```
+
+
+**Creating a covariance matrix using the `cov()` function**
+
+```{r covariance2}
+cov(hunger_data)
+```
+
+**What does this matrix tell us?**
+
+ - The values along the diagonals represent the variances of each variable:
+ 
+  - The variance of `hungerScore` is  `9.566667`
+  
+  - The variance of `noOfMeals` is `1.833333`
+  
+- The other values represent the covariance between our two variables:
+
+  - The covariance between `hungerScore` and `noOfMeals` is `3.055556`
+
+**What does the covariance score tell us?**
+
+- A positive score as `3.055556` indicates that there is a positive relationship between our two variables.
+
+- This suggests that participants with a high score of hunger &uarr; also have indicated to have ingested a higher number of meals &uarr;.
+
+- If the score would have been `-3.055556`, it would have indicated that there is a negative relationship between the two variables.
+
+- Hypothetically, such a negative relationship could have shown how a variable increases &uarr; as the other one decreases &darr; - for instance, the more meals were ingested, the less hunger was experienced.
+
+- Had the covariance score been `0`, this would have suggested that there is no relationship between our variables.
+
+**What do you need to keep in mind about covariance?**
+
+- Covariance can vary between -∞ and +∞.
+
+- Changes in scale of measurement (from km to m) affect covariance scores.
+
+- We can standardize covariance - this way, we are using a universal unit of measurement (the standard deviation) and as a result we obtain **Pearson correlation coefficients**.
+
+## Correlation
+
+As we have mentioned before, **correlation represents standardized covariance**. 
+
+- Correlation values can only lie between +1 and -1.
+
+- A coefficient of +1 indicates that the two variables are perfectly positively correlated, and as one variable increases, the other one increases as well by the same amount.
+
+- A coefficient of -1 indicates that the two variables are perfectly negatively correlated: If one variable increases, the other one decreases by the same amount.
+
+- A coefficient of 0 indicates that there is no relationship between the two variables.
+
+<p class="alert alert-info"> Correlation coefficients are also useful for finding out the strength of the relationship between two variables: the closer to 0 the values is, the weaker the relationship. By contrast, the closer the value is to 1, the stronger the relationship between the two variables. In addition, the correlation coefficient is commonly used as an effect size measure - see Field, 2013 (p. 209) for more details, as well as a critical discussion with respect to these values.
+</p>
+
+
+# Computing bivariate correlations in R
+
+<div class="alert alert-warning" role="alert">
+**Clarification:** Bivariate concerns two variables. A bivariate correlation refers to computing a correlation coefficient between two variables.
+</div>
+
+Next up, we will replicate the exercise you have completed in SPSS. In this example, we will assess the **relationship between the number of watched advertisments and the number of packets of sweets that were bought** by conducting a bivariate correlation test.
+
+**Entering the commercial-sweets data**
+
+Let's create a data frame containing the relevant data.
+
+```{r comm_sweets}
+commercial_sweets_dat <-data.frame(packets_bought = c(8, 9, 10, 13, 15),
+                          ads_watched = c(5, 4, 4, 6, 8))
+
+# Check the result
+commercial_sweets_dat
+``` 
+
+For the advert-sweets correlation we would plan on computing Pearson's correlation coeffcient (Pearson's r). As any statistical test, a correlation test also has some prerequisites. Let's make sure our data fulfills these requirements.
+ 
+## Checking the requirements for a correlation test 
+
+
+### 1. Data type
+
+Our data needs to be **at least of interval type.** Both variables in our dataset are luckily of ratio level (meaning, there could have been 0 commercial watches, and 0 packets of sweets bought).
+
+<div class="alert alert-warning" role="alert">
+If you are not sure what these data types mean (ratio, interval, etc.), here's a chance to refresh these notions and see some other examples: https://www.scribbr.com/statistics/levels-of-measurement/.
+</div>
+
+`Assumption fulfilled ✅`
+
+### 2. Normality assumption
+
+If you want to check whether there is a significant relationship between your variables, you need to make sure that both of your variables are normally distributed. 
+
+**However**, you can compute a correlation coefficient, without necessarily checking whether this coefficient is significant. In that case you would use the `cor()` function
+
+Let's see an example of how this function works. As a first argument, we are supplying the dataset containing our two variables. Note that if the dataset would have contained more variables, you would have had to index the relevant ones only. You also need to specify which correlation coefficient you want to have computed. In our case, since our data is ratio, Pearson is what we are going for.
+
+```{r}
+cor(commercial_sweets_dat, method = "pearson")
+```
+
+**Result**: We have a matrix showing us a value of correlation of 0.87. But what can we learn from this value? We need evidence to support the hypothesis that there is indeed a significant relationship between our variables, which is why we will conduct a significance test for our Pearson's correlation coefficient.
+
+You are checking for significance by asking: Can I reject the null hypothesis stating that there is no relationship/no correlation between my two variables?
+
+By now you are already well versed in checking for the normality assumption, which is why I trust that you can test for the assumption of formality on your own. I will simply remind you of the steps you need to perform
+
+#### 2.1. Plotting the data for each variable
+
+- **Exercise**: Plot a histogram to show the distribution of the watched commercials
+```{r histogram_ads}
+
+```
+
+- **Exercise**: Plot a histogram to show the distribution of the packets of sweets that were bought
+
+```{r histogram_sweets}
+
+```
+
+- **Exercise**: Plot a QQ-plot for the watched commercials
+
+```{r qqplot_ads}
+
+```
+
+- **Exercise**: Plot a QQ-plot for the packets of sweets that were bought
+
+```{r qqplot_sweets}
+
+```
+
+
+**What conclusions can you draw based on the visual representations? Describe what you leared from the histograms and the qq-pplots!** Type your answer below.
+
+
+#### 2.2. Run a normality test
+
+Since our sample is small, we will be using the Shapiro-Wilk test.
+
+- **Exercise**: Conduct a Shapiro-Wilk test to check whether the data about watched commercials is normally distributed
+
+```{r shapiro_wilk_ads}
+
+```
+- **Exercise**: Conduct a Shapiro-Wilk test to check whether the data about packets of sweets is normally distributed
+
+```{r shapiro_wilk_sweets}
+
+```
+
+Can you explain why the assumption of normality is met? Make sure to report the results of the Shapiro Wilk test.
+
+`Assumption fulfilled ✅`
+
+What would have happened if our variables would not have been normally fulfilled?
+
+a) You could have **transformed the data** (using the natural logaritm for example) and check once again whether the data deviates from normality
+b) For data that fulfills the normality assumption, we use Pearson's correlation, but if the data does not, you can use non-parametric coefficients such as: Spearman rho (for large samples + ordinal data or non-normally distributed data - ) or Kendall tau (for small samples + ordinal data).
+
+## Conducting the correlation test
+
+Before conducting the test, you need to decide whether the test will be one-tailed or two-tailed. This depends greatly on how you formulated your hypotheses.
+
+**Conducting a one-tailed Pearson's correlation test**
+
+If you are working with a *directed hypothesis such as the more adverts people watch, the more they buy sweets*, then you need to make sure that the argument `alternative` which refers to your alternative hypothesis is set to `greater` (e.g., `cor.text(variable1, variable2, alernative = "greater", method = "pearson"`), because you are testing for a positive association. Had you wanted to test for a negative association, the you need to use "less" (e.g., `cor.text(variable1, variable2, alernative = "less", method = "pearson")`).
+
+```{r cor_test_onetailed}
+cor.test(commercial_sweets_dat$packets_bought,commercial_sweets_dat$ads_watched, alternative = "greater", method = "pearson")
+```
+How to report the result:
+
+There was a significant positive relationship between the number of adverts watched and the number of sweets packets bought (*r* = .87, *p* (one-tailed) = .027).
+
+
+**Conducting a two-tailed Pearson's correlation test**
+
+If your alternative hypothesis is not directional, then you need to supply the `"two.sided"` value to the `alternative =` argument.
+
+```{r cor_test_two_tailed}
+cor.test(commercial_sweets_dat$packets_bought,commercial_sweets_dat$ads_watched, alternative = "two.sided", method = "pearson")
+```
+The two-tailed Pearson's correlation test yielded a non-significant result, and thus we have insufficient evidence to reject the null hypothesis that there is no relationship between our two values.
+
+<div class="alert alert-danger" role="alert">
+The fact that the same test yielded different results is very both confusing and very much enlightening. This shows that you need to be very clear about the details of the test you want to run, before you run it. You need to write down your hypotheses as clear as possible and to stick to these also after you see the results of the tests.
+</div>
+
+## What to do when Pearson's r is not the right correlation coefficient for your data?
+
+Depending on which data you wish to analyse, the correlation coefficient which you might want to put up for a statistical test will be different. Here are some very helpful excerpts from Chapter 6 from Andy Field's "Discovering statistics with R":
+
+>"**Spearman's correlation coefficient** (Spearman, 1910), is a non-parametric statistic and so can be used when the data have violated parametric assumptions such as non-normally distributed data (see Chapter 5). You'll sometimes hear the test referred to as Spearman's rho. Spearman's test works by first ranking the data (see section 15.4.1), and then applying Pearson's equation to those ranks. [...]
+>Imagine I wanted to test a theory that more creative people will be able to create taller
+tales. I gathered together 68 past contestants from this competition and asked them where
+they were placed in the competition (first, second, third, etc.) and also gave them a creativity
+questionnaire (maximum score 60) .. The position in the competition is an ordinal variable
+(see section 1.5.1.2) because the places are categories but have a meaningful order (first place
+is better than second place and so on)." (Field, 2013, p. 223)
+
+To conduct a correlation analysis using **Spearman's correlation coefficient** you will still use the `cor.test()` function, but the method will be set to "spearman". This is what a function call would look like:
+
+`cor.test(variable1, variable2, method = "spearman")`
+
+The alernative argument (which refers to your alternative hypothesis) is not supplied in this example, but should be clearly stated when running any correlation analysis.
+
+
+>"**Kendall's tau**, is another non-parametric correlation and it should be used rather than
+Spearman's coefficient when you have **a small data set with a large number of tied ranks**.
+This means that if you rank all of the scores and many scores have the same rank, then
+Kendall's tau should be used. Although Spearman's statistic is the more popular of the
+two coefficients, there is much to suggest that Kendall's statistic is actually a better estimate
+of the correlation in the population (see Howell, 1997: 293). As such, we can draw
+more accurate generalizations from Kendall's statistic than from Spearman's. To carry out
+Kendall's correlation on the World's Biggest Liar data simply follow the same steps as for
+Pearson and Spearman correlations but use method = "kendall":
+
+To conduct a correlation analysis using **Kendall's tau coefficeint** you will still use the `cor.test()` function, but the method will be set to "kendall". This is what a function call would look like:
+
+`cor.test(variable1, variable2, method = "kendall")`
+
+The alernative argument (which refers to your alternative hypothesis) is not supplied in this example, but should be clearly stated when running any correlation analysis.
+
+
+## Using R<sup>2</sup> for interpretation 
+
+(For clarity's sake: R <sup>2</sup> is a way of letting RMarkdown know, that the 2 should be a superscript in the HTML output, in other words, whenever you see R<sup>2</sup> it means R squared)
+
+We can use the correlation coefficient to gain even more information. If we square it, we get the **coefficient of determination, R<sup>2</sup>**. This is a measure of the amount of variance in a variable that is shared by another variable.
+
+Let's look at the example Andy Fields gives us (Fields, 2013, p. 222):
+
+
+>"We may look at the relationship between exam anxiety and exam performance. Exam performances vary from person to person because of any number of factors (different ability, different levels of preparation and so on). If we add up all of this variability (rather like when we calculated the sum of squares in section 2.4.1) then we would have an estimate of how much variability 'exists in exam  performances. We can then use R2 to tell us how much of this variability is shared by exam anxiety. These two variables had a correlation of -0.4410 and so the value of R^2 will be (-0.4410)^2 = 0.194. This value tells us how much of the variability in exam performance is shared by exam anxiety."
+
+
+Let's do this with our commercial and sweets data
+
+**Squaring the correlation coefficients of the commercials and sweet packets data**
+
+To square the correlation coefficients, we use the operator `^`.
+
+```{r}
+cor(commercial_sweets_dat)^2
+```
+
+**The result:**
+A matrix containing **coefficients of determination, R^2**, and from which we learn that there is 0.75 variability in `packets_bought` that is shared by `ads_watched`.
+
+You can express the **coefficient of determination, R^2** also in terms of percentages
+
+```{r}
+cor(commercial_sweets_dat)^2*100
+```
+
+We learn that 75% of the variability in `packets_bought` that is shared by `ads_watched`.
+
+
+# Correlation case #2: Exploring the relationship between the time writing an essay and the obtained mark.
+
+We will be replicating one more exercise that you have already conducted in SPSS. We will use the `EssayMarks.sav` file, containing data from 45 participants.
+
+**Question of interest with respect to the data**:
+A student was interested in whether there was a positive relationship between the time spent writing an essay and the mark received. He got 45 of his friends and timed how long they spent writing an essay (hours) and the percentage they got in the essay (essay). He also translated these grades into their degree classifications (grade): in the UK, a student can get a first-class mark (the best), an upper-second class mark, a lower second, a third, a pass or a fail (the worst).
+
+**Task**:
+ Using the data in the file EssayMarks.dat find out:
+ 
+a) what the relationship was between the time spent doing an essay and the eventual mark in terms of percentage 
+
+b) what the relationship was between the time spent doing an essay and the eventual mark in terms of percentage and grade degree class.
+
+To do that, you need to:
+
+1) Draw a scatterplot of the data. This will help you understand the correlation relationship visually.
+
+2) Think about your hypotheses with respect to each correlation relationship you want to test and which test you will use for a) and for b).
+
+We will draw the scatterplot together, but based on the data that you have at your disposal and on the diagram that you have seen in the class3 SPSS handout, you need to decide which correlation test you will be conducting (Pearson's, Spearman's, Kendall's) for the two types of data (grade in percentages, grade expressed as degree classes).
+
+**Loading in data**
+```{r correxe2_dat}
+essayData <-  read.delim("EssayMarks.dat",  header = TRUE)
+```
+
+Explore the structure of the data and look at the column names and row contents
+
+```{r essayData1}
+str(essayData)
+```
+**Drawing a scatterplot of the hours spent on an essay and the achieved grade**
+
+```{r}
+ggplot(essayData, aes(hours, essay))+
+geom_point(size = 3) + labs(x = "Hours Spent on Essay", y = "Essay Mark (%)",
+                            title = "Relationship between hours spent writing an essay and achieved grade in %") 
+```
+
+What do we learn from this plot? 
+
+Could we have plotted the relationship between hours spent and grade in degree classes?
+
+```{r}
+ggplot(essayData, aes(hours, grade))+
+geom_point(size = 3) + labs(x = "Hours Spent on Essay", y = "Essay Mark (%)",
+                            title = "Relationship between hours spent writing an essay and achieved grade in degree class") 
+```
+
+Not really. We use scatterplots to explore the relationship between *two numerical* variables. The degree class of the grade is expressed in values of character type. This is already a hint about which kind of test you might need to conduct in order to explore this relationship.
+
+It's your turn to take the stats wheel.
+
+1. Check the assumption of normality when appropriate
+
+2. Conduct the appropriate correlation analyses for each case
+
+3. Report the results.
+
+
+Before proceeding with the tasks, there is an additional step that must be performed in order for you to be able to run a correlation analysis on the grades expressed in degree classes. The values are now expressed in character values. We need to transform the grade column to a factor, order its levels and then recode them to numerical values. **This does not make it a purely numerical variable. This is just a step that is necessary for the analysis, but does not change the nature of the data!**
+
+```{r}
+# Transforming the grade column to a factor and ordering the levels
+essayData$grade<-factor(essayData$grade, levels = c("First Class","Upper Second Class", "Lower Second Class", "Third Class"))
+
+# Coercing the factor levels into numerical values
+essayData$grade<- as.numeric(essayData$grade)
+
+str(essayData)
+```
+## Exploring the relationship between and hours and essay grade in percentages
+
+```{r normality_assumption1}
+
+```
+
+```{r correlation_analysis1}
+
+```
+
+## Exploring the relationship between and hours and essay grade degree classes
+
+
+
+```{r correlation_analysis2}
+
+```
+
+# Finish line
+
+Congratulations for wading through the waters of correlations in R. You are now well versed in the art of checking for a test's assumptions and hopefully you have understood why and how we conduct analyses of correlations. Stay tuned for more correlation-related R-ness.
+
+Make sure your script runs and can be knitted error-free.
